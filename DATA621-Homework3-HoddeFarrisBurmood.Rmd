@@ -1,0 +1,101 @@
+---
+title: "DATA621-Homework3-HoddeFarrisBurmood"
+author: "Rob Hodde, Matt Farris, JeffreyBurmood"
+date: "3/28/2017"
+output: pdf_document
+---
+
+# DATA621 Homework #3  
+  
+# Team Members: Rob Hodde, Matt Farris, Jeffrey Burmood  
+  
+## Problem Description  
+Explore, analyze and model a data set containing information on crime for various neighborhoods of a major city. Using the data set build a binary logistic regression model on the training data set to predict whether the neighborhood will be at risk for high crime levels. Provide classifications and probabilities for the evaluation data set using the developed binary logistic regression model.  
+  
+## Data Exploration  
+  
+```{r,echo=TRUE,warning=FALSE}
+# Load required libraries
+library(ggplot2)
+library(ROCR)
+
+# Read in the dataset
+crime <- read.csv("./crime-training-data.csv",header=TRUE,na.strings=c(" "))
+crime_eval <- read.csv("./crime-evaluation-data.csv",header=TRUE,na.strings=c(" "))
+# Need to set variables to a factor as required
+crime$target <- as.factor(crime$target)
+crime$chas <- as.factor(crime$chas)
+crime_eval$chas <- as.factor(crime_eval$chas)
+# Now generate some summary statistics
+print(summary(crime))
+# Visual check for obvious correlations
+pairs(crime,col=crime$target)
+#
+# no NAs found so no missing values to remove or fix?
+#
+# Look over the variables checking for outliers/influencial points, correlation between variables, etc.
+
+# Look at some histograms
+# age
+age.plot <- ggplot(crime, aes(x=age,color=target)) + geom_histogram(position="dodge",binwidth=5)
+print(age.plot)
+# zn
+zn.plot <- ggplot(crime, aes(x=zn,color=target)) + geom_histogram(position="dodge",binwidth=5)
+print(zn.plot)
+#
+
+```
+  
+## Data Preparation  
+  
+```{r,echo=TRUE,warning=FALSE}
+# Based on the data exploration results, identify any changes, transformations, and new or deleted variables to use for the next step of building the models.
+
+```
+  
+## Build Models  
+  
+```{r,echo=TRUE,warning=FALSE}
+## 75% of the sample size
+smp_size <- floor(0.80 * nrow(crime))
+
+## set the seed to make your partition reproductible
+train_ind <- sample(seq_len(nrow(crime)), size = smp_size)
+
+train <- crime[train_ind, ]
+test <- crime[-train_ind, ]
+
+# quick look at model with all variables
+qm <- glm(target ~ .,family=binomial(link='logit'),data=train)
+print(summary(qm))
+
+# Look at some histograms
+# age
+age.plot <- ggplot(train, aes(x=age,color=target)) + geom_histogram(position="dodge",binwidth=5)
+print(age.plot)
+# zn
+zn.plot <- ggplot(train, aes(x=zn,color=target)) + geom_histogram(position="dodge",binwidth=5)
+print(zn.plot)
+#
+
+p <- predict(qm, newdata=subset(test,select=c(1,2,3,4,5,6,7,8,9,10,11,12,13)), type="response")
+pr <- prediction(p, test$target)
+prf <- performance(pr, measure = "tpr", x.measure = "fpr")
+plot(prf)
+
+#
+auc <- performance(pr, measure = "auc")
+auc <- auc@y.values[[1]]
+auc
+
+
+```
+  
+## Select Models  
+  
+```{r,echo=TRUE,warning=FALSE}
+
+```
+  
+All Done!  
+  
