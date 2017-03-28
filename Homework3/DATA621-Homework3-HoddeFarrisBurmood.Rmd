@@ -18,10 +18,11 @@ Explore, analyze and model a data set containing information on crime for variou
 # Load required libraries
 library(ggplot2)
 library(ROCR)
+library(RCurl)
 
-# Read in the dataset
-crime <- read.csv("./crime-training-data.csv",header=TRUE,na.strings=c(" "))
-crime_eval <- read.csv("./crime-evaluation-data.csv",header=TRUE,na.strings=c(" "))
+# Read in the dataset from github
+crime <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/master/Homework3/data/crime-training-data.csv"),header=TRUE,na.strings=c(" "))
+crime_eval <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/master/Homework3/data/crime-evaluation-data.csv"),header=TRUE,na.strings=c(" "))
 # Need to set variables to a factor as required
 crime$target <- as.factor(crime$target)
 crime$chas <- as.factor(crime$chas)
