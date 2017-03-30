@@ -23,10 +23,12 @@ library(RCurl)
 # Read in the dataset from github
 crime <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/master/Homework3/data/crime-training-data.csv"),header=TRUE,na.strings=c(" "))
 crime_eval <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/master/Homework3/data/crime-evaluation-data.csv"),header=TRUE,na.strings=c(" "))
-# Need to set variables to a factor as required
-crime$target <- as.factor(crime$target)
-crime$chas <- as.factor(crime$chas)
-crime_eval$chas <- as.factor(crime_eval$chas)
+# First, get a general look at the data
+head(crime)
+# Let's start by exploring the type of each variable
+types <- sapply(1:length(crime),function(x) typeof(crime[,x]))
+types.df <- data.frame(VAR=names(crime),TYPE=types)
+types.df
 # Now generate some summary statistics
 print(summary(crime))
 # Visual check for obvious correlations
@@ -34,25 +36,120 @@ pairs(crime,col=crime$target)
 #
 # no NAs found so no missing values to remove or fix?
 #
-# Look over the variables checking for outliers/influencial points, correlation between variables, etc.
-
-# Look at some histograms
-# age
-age.plot <- ggplot(crime, aes(x=age,color=target)) + geom_histogram(position="dodge",binwidth=5)
-print(age.plot)
-# zn
-zn.plot <- ggplot(crime, aes(x=zn,color=target)) + geom_histogram(position="dodge",binwidth=5)
-print(zn.plot)
+# Look over the variables checking for outliers/influencial points, correlation between variables, etc. using box plots.
 #
+boxplot(crime$zn, main="zn")
+boxplot(crime$indus, main="indus")
+boxplot(crime$nox, main="nox")
+boxplot(crime$rm, main="rm")
+boxplot(crime$age, main="age")
+boxplot(crime$dis, main="dis")
+boxplot(crime$rad, main="rad")
+boxplot(crime$tax, main="tax")
+boxplot(crime$ptratio, main="ptratio")
+boxplot(crime$black, main="black")
+boxplot(crime$lstat, main="lstat")
+boxplot(crime$medv, main="mdev")
+#
+# the following variables look like they have some outliers, 
+# zn,rm, dis, black, lstat, medv so let's look at their historgrams
+
+# zn
+#zn.plot <- ggplot(crime, aes(x=zn,color=target)) + geom_histogram(position="dodge",binwidth=5)
+#print(zn.plot)
+m <- mean(crime$zn)
+s <- sd(crime$zn)
+hist(crime$zn,prob=TRUE,xlab="ZN",main='')
+curve(dnorm(x,mean=m,sd=s),col="darkblue",lwd=2,add=TRUE)
+# zn is so skewed, let's look at a frequency count
+plot(table(crime$zn))
+# let's look at a plot of the values
+plot(crime$zn)
+# rm
+m <- mean(crime$rm)
+s <- sd(crime$rm)
+hist(crime$rm,prob=TRUE,xlab="RM",main='')
+curve(dnorm(x,mean=m,sd=s),col="darkblue",lwd=2,add=TRUE)
+# let's look at a plot of the values
+plot(crime$rm)
+# dis
+m <- mean(crime$dis)
+s <- sd(crime$dis)
+hist(crime$dis,prob=TRUE,xlab="DIS",main='')
+curve(dnorm(x,mean=m,sd=s),col="darkblue",lwd=2,add=TRUE)
+# let's look at a plot of the values
+plot(crime$dis)
+# black
+m <- mean(crime$black)
+s <- sd(crime$black)
+hist(crime$black,prob=TRUE,xlab="BLACK",main='')
+curve(dnorm(x,mean=m,sd=s),col="darkblue",lwd=2,add=TRUE)
+# black is so skewed, let's look at a frequency count
+plot(table(crime$black))
+# let's look at a plot of the values
+plot(crime$black)
+# lstat
+m <- mean(crime$lstat)
+s <- sd(crime$lstat)
+hist(crime$lstat,prob=TRUE,xlab="LSTAT",main='')
+curve(dnorm(x,mean=m,sd=s),col="darkblue",lwd=2,add=TRUE)
+# let's look at a plot of the values
+plot(crime$lstat)
+# medv
+m <- mean(crime$medv)
+s <- sd(crime$medv)
+hist(crime$medv,prob=TRUE,xlab="MEDV",main='')
+curve(dnorm(x,mean=m,sd=s),col="darkblue",lwd=2,add=TRUE)
+# let's look at a plot of the values
+plot(crime$medv)
+
+# quick look at model with all variables
+crime.model <- glm(target ~ .,family=binomial(link='logit'),data=crime)
+print(summary(crime.model))
+
 
 ```
+  
+According to the description, the variables zn, indus, and age are area, or land, proportions. According to the statistical summary, the values for these variables are all within the range [1,100] as you would expect.  
+  
+The predictor variable zn is highly right skewed, we can confirm this by comparing the median and mean where the median is 0.0, but the median is 11.58. The frequency count plot shows how poor the distribution is due to clustering of the data at one extreme.  
+  
+The predictor variable black is highly left skewed. We can confirm this by comparing the median and mean where the median is 391.34 and the mean is 357.12. The frequency count plot shows how poor the distribution is due to clustering of the data at one extreme.  
+  
+The predictor variable dis is slightly right skewed. We can confirm this by comparing the median and mean where the median is 3.191 and the mean is 3.796.  
+  
+Fortunately, no missing data, or NAs, were found.  
+  
+The following data corrections were identified in this section:  
+  
+(1) The predictor variable "chas" and the response variable "target" are supposed to be categorical (binary), so we need to convert them to factors.  
+  
+(2) Need to determine if there are other variables highly coorelated with the zn or black variable that don't have the severe skew and outliers. This would allow us to remove the zn or black variable from the model.  
+  
+Why is the tax rate an integer and not a numeric???  
   
 ## Data Preparation  
   
+The variable changes we identified so far include converting the predictor variable "chas" and the response variable "target" to factors.
+  
 ```{r,echo=TRUE,warning=FALSE}
 # Based on the data exploration results, identify any changes, transformations, and new or deleted variables to use for the next step of building the models.
+# Need to set variables to a factor as required
+crime$target <- as.factor(crime$target)
+crime$chas <- as.factor(crime$chas)
+crime_eval$chas <- as.factor(crime_eval$chas)
+
+# get a table of non-factor variables
+crime.nofactor <- subset(crime,select=-c(chas,target))
+# build a correlation table to study the variable relationships
+cor.table <- cor(crime.nofactor) # build a table of inter-variable correlation values
+(cor.table)
 
 ```
+  
+Based on the correlation table, the variable zn has a moderate correlation with the variable dis. The plot of the dis data shows a much better distribution of values. Consequently, one possibility is to remove the zn variable from the data set for modeling.  
+  
+What to do about the black variable??? 
   
 ## Build Models  
   
@@ -70,14 +167,6 @@ test <- crime[-train_ind, ]
 qm <- glm(target ~ .,family=binomial(link='logit'),data=train)
 print(summary(qm))
 
-# Look at some histograms
-# age
-age.plot <- ggplot(train, aes(x=age,color=target)) + geom_histogram(position="dodge",binwidth=5)
-print(age.plot)
-# zn
-zn.plot <- ggplot(train, aes(x=zn,color=target)) + geom_histogram(position="dodge",binwidth=5)
-print(zn.plot)
-#
 
 p <- predict(qm, newdata=subset(test,select=c(1,2,3,4,5,6,7,8,9,10,11,12,13)), type="response")
 pr <- prediction(p, test$target)
