@@ -14,12 +14,13 @@ Explore, analyze and model a data set containing information on crime for variou
   
 ## Data Exploration  
   
-```{r,echo=TRUE,warning=FALSE}
+```{r,echo=FALSE,warning=FALSE}
 # Load required libraries
 library(ggplot2)
 library(ROCR)
 library(RCurl)
-
+library(knitr)
+#
 # Read in the dataset from github
 crime <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/master/Homework3/data/crime-training-data.csv"),header=TRUE,na.strings=c(" "))
 crime_eval <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/master/Homework3/data/crime-evaluation-data.csv"),header=TRUE,na.strings=c(" "))
@@ -32,12 +33,15 @@ types.df
 # Now generate some summary statistics
 print(summary(crime))
 # Visual check for obvious correlations
-pairs(crime,col=crime$target)
+#pairs(crime,col=crime$target)
 #
-# no NAs found so no missing values to remove or fix?
+# no NAs found so no missing values to remove or fix
 #
 # Look over the variables checking for outliers/influencial points, correlation between variables, etc. using box plots.
 #
+# set the plot-page configuration
+par(mfcol=c(1,2))
+
 boxplot(crime$zn, main="zn")
 boxplot(crime$indus, main="indus")
 boxplot(crime$nox, main="nox")
@@ -52,11 +56,18 @@ boxplot(crime$lstat, main="lstat")
 boxplot(crime$medv, main="mdev")
 #
 # the following variables look like they have some outliers, 
-# zn,rm, dis, black, lstat, medv so let's look at their historgrams
-
+# zn,rm, dis, black, lstat, medv so let's look at their histograms
+```
+  
+Based on an analysis of the box plots, the following variables have some outliers that may, or may not, exert influence on the regression results.  
+ - zn, rm, dis, black, lstat, medv  
+  
+We'll next look at these variable mroe closely, starting with there histograms and frequency counts to better understand the nature of their distribution.  
+  
+```{r,echo=FALSE,warning=FALSE}
+# set the plot-page configuration
+par(mfcol=c(1,1))
 # zn
-#zn.plot <- ggplot(crime, aes(x=zn,color=target)) + geom_histogram(position="dodge",binwidth=5)
-#print(zn.plot)
 m <- mean(crime$zn)
 s <- sd(crime$zn)
 hist(crime$zn,prob=TRUE,xlab="ZN",main='')
@@ -107,10 +118,11 @@ plot(crime$medv)
 crime.model <- glm(target ~ .,family=binomial(link='logit'),data=crime)
 print(summary(crime.model))
 
-
 ```
   
 According to the description, the variables zn, indus, and age are area, or land, proportions. According to the statistical summary, the values for these variables are all within the range [1,100] as you would expect.  
+  
+Based on our detailed review of the variables that contained outliers, the following variables could be problematic:  
   
 The predictor variable zn is highly right skewed, we can confirm this by comparing the median and mean where the median is 0.0, but the median is 11.58. The frequency count plot shows how poor the distribution is due to clustering of the data at one extreme.  
   
@@ -126,13 +138,11 @@ The following data corrections were identified in this section:
   
 (2) Need to determine if there are other variables highly coorelated with the zn or black variable that don't have the severe skew and outliers. This would allow us to remove the zn or black variable from the model.  
   
-Why is the tax rate an integer and not a numeric???  
-  
 ## Data Preparation  
   
 The variable changes we identified so far include converting the predictor variable "chas" and the response variable "target" to factors.
   
-```{r,echo=TRUE,warning=FALSE}
+```{r,echo=FALSE,warning=FALSE}
 # Based on the data exploration results, identify any changes, transformations, and new or deleted variables to use for the next step of building the models.
 # Need to set variables to a factor as required
 crime$target <- as.factor(crime$target)
@@ -143,18 +153,62 @@ crime_eval$chas <- as.factor(crime_eval$chas)
 crime.nofactor <- subset(crime,select=-c(chas,target))
 # build a correlation table to study the variable relationships
 cor.table <- cor(crime.nofactor) # build a table of inter-variable correlation values
-(cor.table)
+kable(cor.table)
 
 ```
   
 Based on the correlation table, the variable zn has a moderate correlation with the variable dis. The plot of the dis data shows a much better distribution of values. Consequently, one possibility is to remove the zn variable from the data set for modeling.  
   
-What to do about the black variable??? 
-  
 ## Build Models  
   
-```{r,echo=TRUE,warning=FALSE}
+We will attempt to create the simplest model possible by using only one variable - the one that provides us the highest overall AUC (performance) all by itself.  We can plug in each variable separately and then select the highest result.  The best variable is nox - the presence of nitrogen oxides (an industrial pollutant) on the property.  
+  
+```{r,echo=FALSE}
+
+#show the AUC for the most valuable variable - nox (nitrogen oxides concentration - ie: poisoned environment) 
+qm <- glm(target ~ nox,family=binomial(link='logit'),data=crime)
+p <- predict(qm, newdata=subset(crime,select=c(4)), type="response")
+pr <- prediction(p, crime$target)
+auc <- performance(pr, measure = "auc")
+auc <- auc@y.values[[1]]
+auc  #.934
+
+```
+  
+By combining nos with all the remaining variables and selecting the highest resulting AUC result, we conclude that nox plus rad (access to radial highways) is the strongest combinaton of two variables.  
+  
+```{r,echo=FALSE}
+
+#show the AUC for the best combination of two variables - nox and rad
+qm <- glm(target ~ nox + rad,family=binomial(link='logit'),data=crime)
+p <- predict(qm, newdata=subset(crime,select=c(4,8)), type="response")
+pr <- prediction(p, crime$target)
+auc <- performance(pr, measure = "auc")
+auc <- auc@y.values[[1]]
+auc  #.948
+
+```
+  
+  
+```{r,echo=FALSE}
+
+#show the AUC for the best combination of three variables - nox, rad and zn
+qm <- glm(target ~ nox + rad + zn,family=binomial(link='logit'),data=crime)
+p <- predict(qm, newdata=subset(crime,select=c(1,4,8)), type="response")
+pr <- prediction(p, crime$target)
+auc <- performance(pr, measure = "auc")
+auc <- auc@y.values[[1]]
+auc  #
+
+```
+  
+By combining three variables - nox, rad and zn - that is, the concentration of nitrogen oxides, access to radial highways and the proportion of land zoned for large lots, we can predict with 95.8% accuracy whether the crime rate at this property is above or below average.  Since this is very close to the performance of the model using all variables (96%), we can be confident in using these three variables for our decision support process, and disregarding the others.  
+  
+## Select Models  
+One way to test what variables to includes running univariate regression tests and analyse corresponding p-values and relative AIC values. Furthermore, we will investigate the AUC as well to see how accurate our univarate models are:  
+```{r,echo=FALSE,warning=FALSE}
 ## 75% of the sample size
+set.seed(121)
 smp_size <- floor(0.80 * nrow(crime))
 
 ## set the seed to make your partition reproductible
@@ -164,11 +218,62 @@ train <- crime[train_ind, ]
 test <- crime[-train_ind, ]
 
 # quick look at model with all variables
-qm <- glm(target ~ .,family=binomial(link='logit'),data=train)
-print(summary(qm))
 
 
-p <- predict(qm, newdata=subset(test,select=c(1,2,3,4,5,6,7,8,9,10,11,12,13)), type="response")
+zn_uni_model<- glm(target ~ zn,family=binomial(link='logit'),data=train)           
+indus_uni_model<- glm(target ~ indus,family=binomial(link='logit'),data=train)       
+chas_uni_model<- glm(target ~ chas,family=binomial(link='logit'),data=train)        
+nox_uni_model<- glm(target ~ nox,family=binomial(link='logit'),data=train)        
+rm_uni_model<- glm(target ~ rm,family=binomial(link='logit'),data=train)          
+age_uni_model<- glm(target ~ age,family=binomial(link='logit'),data=train)          
+dis_uni_model<- glm(target ~ dis,family=binomial(link='logit'),data=train)            
+rad_uni_model<- glm(target ~ rad,family=binomial(link='logit'),data=train)           
+tax_uni_model<- glm(target ~ tax,family=binomial(link='logit'),data=train)            
+ptratio_uni_model<- glm(target ~ ptratio,family=binomial(link='logit'),data=train)      
+black_uni_model<- glm(target ~ black,family=binomial(link='logit'),data=train)       
+lstat_uni_model<- glm(target ~ lstat,family=binomial(link='logit'),data=train)       
+
+
+models <- list(zn_uni_model,indus_uni_model,
+            chas_uni_model,nox_uni_model,
+            rm_uni_model,age_uni_model,
+            dis_uni_model,rad_uni_model,
+            tax_uni_model,ptratio_uni_model,
+            black_uni_model,lstat_uni_model)
+
+```
+  
+```{r,echo=FALSE}
+#Creation of lists 
+var <- c()
+p_val <- c()
+aic <- c()
+auc <- c()
+
+#For loop to run variables over univarate glms
+for(i in models){
+  var <- c(var,variable.names(i)[2])
+  aic <- c(aic,i$aic)
+  p_val <- c(p_val,summary(i)$coef[2, "Pr(>|z|)"])
+  p <- predict(i, newdata=subset(test,select=c(1,2,3,4,5,6,7,8,9,10,11,12,13)), type="response")
+  pr <- prediction(p, test$target)
+  prf <- performance(pr, measure = "tpr", x.measure = "fpr")
+  auc_perf<- performance(pr, measure = "auc")
+  auc_val <- auc_perf@y.values[[1]]
+  auc <- c(auc,auc_val)
+}
+
+data.frame(var,p_val,aic,auc)
+```
+  
+From the above table, we can see 1 variable that has no significance and under a univariate regression model, and have high relative AIC, and accuracy that is barely higher than a random variable. The Chas variable is a viable candidate to remove from our modelling.  
+  
+```{r,echo=FALSE,warning=FALSE}
+# Simple backward regression 
+backward <- step(qm)
+summary(backward)
+
+p <- predict(backward, newdata=subset(test,select=c(1,2,3,4,5,6,7,8,9,10,11,12,13)), type="response")
 pr <- prediction(p, test$target)
 prf <- performance(pr, measure = "tpr", x.measure = "fpr")
 plot(prf)
@@ -177,15 +282,8 @@ plot(prf)
 auc <- performance(pr, measure = "auc")
 auc <- auc@y.values[[1]]
 auc
-
-
 ```
-  
-## Select Models  
-  
-```{r,echo=TRUE,warning=FALSE}
 
-```
   
 All Done!  
   
