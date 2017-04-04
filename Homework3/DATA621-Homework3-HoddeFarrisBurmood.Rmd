@@ -2,7 +2,7 @@
 title: "DATA621-Homework3-HoddeFarrisBurmoodLin"
 author: "Rob Hodde, Matt Farris, Jeffrey Burmood, Bin Lin"
 date: "3/28/2017"
-output: html_document
+output: pdf_document
 ---
   
 --------  
