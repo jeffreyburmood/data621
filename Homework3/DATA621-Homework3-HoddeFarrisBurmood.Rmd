@@ -1,15 +1,13 @@
 ---
 title: "DATA621-Homework3-HoddeFarrisBurmoodLin"
-author: "Rob Hodde, Matt Farris, JeffreyBurmood, Bin Lin"
+author: "Rob Hodde, Matt Farris, Jeffrey Burmood, Bin Lin"
 date: "3/28/2017"
-output:
-  pdf_document: default
-  html_document: default
+output: html_document
 ---
-
-\begin{center}
-{\huge Problem Description}
-\end{center}
+  
+--------  
+  
+###Problem Description
 
 Explore, analyze and model a data set containing information on crime for various neighborhoods of a major city. Using the data set build a binary logistic regression model on the training data set to predict whether the neighborhood will be at risk for high crime levels. Provide classifications and probabilities for the evaluation data set using the developed binary logistic regression model.  
   
@@ -18,7 +16,9 @@ Explore, analyze and model a data set containing information on crime for variou
 {\huge Data Exploration}
 \end{center}
 
+--------
 
+##Data Exploration
 
 
 ```{r,include=FALSE,warning=FALSE}
@@ -34,7 +34,28 @@ crime <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/
 crime_eval <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/master/Homework3/data/crime-evaluation-data.csv"),header=TRUE,na.strings=c(" "))
 
 ```
+The first thirteen variables in the table below are potential predictor variables that could affect the response variable *target*.
 
+
+| Variable   |   Type   | Definition
+|:----------:|:--------:|:-----------------------------------------------------------
+| zn         |  Double  | proportion of residential land zoned for large lots 
+| indus      |  Double  | proportion of non-retail business acres per suburb 
+| chas       |  Integer | suburb borders the Charles River (1 = Yes, 0 = No) 
+| nox        |  Double  | nitrogen oxides concentration (parts per 10 million) 
+| rm         |  Double  | average number of rooms per dwelling 
+| age        |  Double  | proportion of owner-occupied units built prior to 1940 
+| dis        |  Double  | mean of distances to five Boston employment centers 
+| rad        |  Integer | index of accessibility to radial highways 
+| tax        |  Integer | full-value property-tax rate per $10,000
+| ptratio    |  Double  | pupil-teacher ratio by town  
+| black      |  Double  | 1000(Bk - 0.63)2 where Bk = proportion of blacks by town 
+| lstat      |  Double  | lower status of the population (percent) 
+| medv       |  Double  | median value of owner-occupied homes in $1000s
+| target     |  Integer | crime rate is above the median crime rate (1 = Yes, 0 = No)
+
+
+Below is a summary of each predictor variable's basic statistics, followed by boxplots which illustrate the spread and outliers for each variable.    
 
 
 ```{r,echo=FALSE,warning=FALSE}
@@ -43,7 +64,7 @@ crime_eval <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreybur
 # Let's start by exploring the type of each variable
 types <- sapply(1:length(crime),function(x) typeof(crime[,x]))
 types.df <- data.frame(VAR=names(crime),TYPE=types)
-kable(types.df)
+#kable(types.df)
 # Now generate some summary statistics
 kable(summary(crime[1:6]))
 kable(summary(crime[7:12]))
@@ -88,10 +109,10 @@ boxplot(crime$medv, main="mdev")
 ```
 
 
-Based on an analysis of the box plots, the following variables have some outliers that may, or may not, exert influence on the regression results.  
- - zn, rm, dis, black, lstat, medv  
+Based on an analysis of the box plots, the following variables have some outliers that may, or may not, exert influence on the regression results: 
+    - zn, rm, dis, black, lstat, medv  
   
-We'll next look at these variable mroe closely, starting with there histograms and frequency counts to better understand the nature of their distribution.  
+We'll next look at these variables more closely, starting with their histograms and frequency counts to better understand the nature of their distribution.  
 
 ```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3}
 # zn
@@ -172,29 +193,36 @@ crime.model <- glm(target ~ .,family=binomial(link='logit'),data=crime)
 
 ```
   
-According to the description, the variables zn, indus, and age are area, or land, proportions. According to the statistical summary, the values for these variables are all within the range [1,100] as you would expect.  
+According to the description, the variables *zn*, *indus*, and *age* are area, or land, proportions. According to the statistical summary, the values for these variables are all within the range [1,100] that we would expect.  
   
 Based on our detailed review of the variables that contained outliers, the following variables could be problematic:  
   
-The predictor variable zn is highly right skewed, we can confirm this by comparing the median and mean where the median is 0.0, but the median is 11.58. The frequency count plot shows how poor the distribution is due to clustering of the data at one extreme.  
+The predictor variable *zn* is highly right skewed, we can confirm this by comparing the median and mean where the median is 0.0, but the median is 11.58. The frequency count plot shows how poor the distribution is due to clustering of the data at one extreme.  
   
-The predictor variable black is highly left skewed. We can confirm this by comparing the median and mean where the median is 391.34 and the mean is 357.12. The frequency count plot shows how poor the distribution is due to clustering of the data at one extreme.  
+The predictor variable *black* is highly left skewed. We can confirm this by comparing the median and mean where the median is 391.34 and the mean is 357.12. The frequency count plot shows how poor the distribution is due to clustering of the data at one extreme.  
   
-The predictor variable dis is slightly right skewed. We can confirm this by comparing the median and mean where the median is 3.191 and the mean is 3.796.  
+The predictor variable *dis* is slightly right skewed. We can confirm this by comparing the median and mean where the median is 3.191 and the mean is 3.796.  
   
 Fortunately, no missing data, or NAs, were found.  
   
 The following data corrections were identified in this section:  
   
-(1) The predictor variable "chas" and the response variable "target" are supposed to be categorical (binary), so we need to convert them to factors.  
+(1) The predictor variable *chas* and the response variable *target* are categorical (binary), so we need to convert them to factors.  
   
-(2) Need to determine if there are other variables highly coorelated with the zn or black variable that don't have the severe skew and outliers. This would allow us to remove the zn or black variable from the model.  
+(2) Need to determine if there are other variables highly coorelated with the *zn* or *black* variables that do not have the severe skew and outliers. This could allow us to remove the *zn* or *black* variables from the model.  
 
 
 \begin{center}
 {\huge Data Preparation}
 \end{center}
-The variable changes we identified so far include converting the predictor variable "chas" and the response variable "target" to factors.
+
+--------
+
+##Data Preparation
+
+
+The variable changes we identified so far include converting the predictor variable *chas* and the response variable *target* to factors.  Next we will look at how each variable correlates to all the others:  
+
   
 ```{r,echo=FALSE,warning=FALSE}
 # Based on the data exploration results, identify any changes, transformations, and new or deleted variables to use for the next step of building the models.
@@ -211,14 +239,18 @@ kable(cor.table[,1:6])
 kable(cor.table[,7:12])
 ```
   
-Based on the correlation table, the variable zn has a moderate correlation with the variable dis. The plot of the dis data shows a much better distribution of values. Consequently, one possibility is to remove the zn variable from the data set for modeling. 
+The correlation table above shows that the variable *zn* is moderately correlated to the variable *dis*. The plot of the *dis* data shows a much better distribution of values. Consequently, one possibility is to remove *zn* from the model and use *dis* instead.  Before doing this, we should look at the real-world context of the two variables to determine if they are meaningfully related.
 
 
 \begin{center}
 {\huge Build Models}
 \end{center}
 
-One analysis of multiple regression models is to take a stepwise approach, and to begin this step, we first take our knowledge from the data exploration, and combine it with a logistic regression. The Univariate Logistic Regression is a useful tool to understand how each variable plays against our target variable. Looking at various statistics, we can which variable impacts are target the most.
+--------
+
+##Build Models
+
+One method of developing multiple regression models is to take a stepwise approach.  To accomplish this, we combine our knowledge from the data exploration above with logistic regression. Univariate Logistic Regression is a useful method to understand how each predictor variable interacts individually with the target (response) variable. Looking at various statistics, we determine which variable may impact our target the most.
 
 ```{r,echo=FALSE,warning=FALSE}
 ## 80% of the sample size
@@ -232,7 +264,6 @@ train <- crime[train_ind, ]
 test <- crime[-train_ind, ]
 
 # quick look at model with all variables
-
 
 zn_uni_model<- glm(target ~ zn,family=binomial(link='logit'),data=train)           
 indus_uni_model<- glm(target ~ indus,family=binomial(link='logit'),data=train)       
@@ -280,11 +311,15 @@ for(i in models){
 kable(data.frame(var,p_val,aic,auc))
 ```
 
-We took the p-value, the AIC statistic and then a measure of the Area under the curve to measure the variables potential in a multiple regression model. From the above table, we can see that the chas variable is least likely to be included in our model, as it isn't statistically signficant. From the above table, we can see 1 variable that has no significance and under a univariate regression model, and have high relative AIC, and accuracy that is barely higher than a random variable. The Chas variable is a viable candidate to remove from our modelling.  
+We examine the p-value (significance), the AIC statistic (goodness-of-fit) and the AUC (Area Under Curve) to measure the potential predictive value of each variable, so we can decide whether or not to include it in our multiple regression model.  We are looking for p-values below .05, AIC values as low as possible, and AUC values as high as possible.
 
-# Model 1 
+From the above table, we can see that *chas* is the least likely to produce any meaningful inference because its p-value is well above .05 (not significant), it has the highest AIC (518, where 100 is considered excellent), and the lowest AUC (.54, where random chance would yield .50).  Therefore, *chas* is the most likely candidate to be removed from our model.  
 
-A quick looke at the total model:
+
+
+### Model 1 
+
+As a baseline, we start with a multiple logistic regression model that includes every predictor variable:
 ```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3}
 # quick look at model with all variables
 ## 80% of the sample size
@@ -306,10 +341,13 @@ summary(crime_model)
 auc  
 ```
 
-# Model 2
+In this model we set aside 20% of the training data and use 80% to train the model.  we then use the model to predict the outcome of the remaining 20% of the data.  The model yields an Area Under Curve of .95, meaning it chose correctly 95% of the time.
+
+
+### Model 2
   
-We will attempt to create the simplest model possible by using only one variable - the one that provides us the highest overall AUC (performance) all by itself.  We can plug in each variable separately and then select the highest result.  The best variable is nox - the presence of nitrogen oxides (an industrial pollutant) on the property.  
-  
+In this scenario we attempt to create the simplest model possible by using only one variable - the one that provides the highest overall AUC (performance) by itself.  We calculate AUC for each variable separately and then select the highest result. 
+
 ```{r,echo=FALSE}
 ## 75% of the sample size
 set.seed(121)
@@ -327,11 +365,14 @@ p <- predict(qm, newdata=subset(test,select=c(4)), type="response")
 pr <- prediction(p, test$target)
 auc <- performance(pr, measure = "auc")
 auc <- auc@y.values[[1]]
-auc  #.934
+auc 
 
 ```
   
-By combining nos with all the remaining variables and selecting the highest resulting AUC result, we conclude that nox plus rad (access to radial highways) is the strongest combinaton of two variables.  
+The best predictor variable is *nox*, yielding an AUC of .87.  
+  
+
+Next we combine *nox* with each of the remaining variables individually and select the highest AUC result.
   
 ```{r,echo=FALSE}
 
@@ -344,13 +385,16 @@ auc <- auc@y.values[[1]]
 auc  #.948
 
 ```
-  
+
+We find that *nox* plus *rad* is the strongest combinaton of two variables, yielding an AUC of .93.
+
+Finally, we search for a third critical predictor by combining *nos* plus *rad* with the remaining variables, individually.  
   
 ```{r,echo=FALSE}
 
 #show the AUC for the best combination of three variables - nox, rad and zn
-qm <- glm(target ~ nox + rad + dis,family=binomial(link='logit'),data=train)
-p <- predict(qm, newdata=subset(test,select=c(4,7,8)), type="response")
+qm <- glm(target ~ nox + rad + zn,family=binomial(link='logit'),data=train)
+p <- predict(qm, newdata=subset(test,select=c(1,4,8)), type="response")
 pr <- prediction(p, test$target)
 auc <- performance(pr, measure = "auc")
 auc <- auc@y.values[[1]]
@@ -358,12 +402,15 @@ auc
 
 ```
   
-By combining three variables - nox, rad and zn - that is, the concentration of nitrogen oxides, access to radial highways and the proportion of land zoned for large lots, we can predict with 95.8% accuracy whether the crime rate at this property is above or below average.  Since this is very close to the performance of the model using all variables (96%), we can be confident in using these three variables for our decision support process, and disregarding the others.  
+By combining three variables - *nox*, *rad* and *zn* - that is, the concentration of nitrogen oxides, access to radial highways and the proportion of land zoned for large lots, we can predict with 94% accuracy whether the crime rate at this property is above or below average.  Since this is very close to the performance of the model using all variables (95%), we can be confident in using these three variables for our decision support process, and disregarding the others.  
   
 
-#Model 3
+###Model 3
 
-## MODEL 3 WITH NOX VARIABLE
+The GLM Model summary in Model 1 illustrates the outsize impact of the predictor variable *nox* compared to all the others.  It carries an Estimate of 53.3 where the next closest in magnitude is only 1.2.  We thought it would be interesting to remove *nox* from the model just to see how the other variables perform without it.  First we will perform a simple backward variable selection optimization process including it.
+
+
+#### MODEL 3 WITH NOX VARIABLE
 ```{r,echo=FALSE,warning=FALSE}
 # Simple backward regression
 model_3 <- glm(target ~ .,family=binomial(link='logit'),data=train)
@@ -382,7 +429,13 @@ auc
 
 ```
 
-## MODEL 3 WITHOUT NOX VARIABLE
+The model reduces to nine variables and yields a nice low residual deviance of 133.9, compared to a null deviance of 515.3.  This roughly means that the model eliminates about 80% of the error compared to choosing at random.  The AUC is .947 which is roughly the same as the full model using all variables.  
+
+
+Let's look at what happens when we remove the *nox* variable:
+
+
+#### MODEL 3 WITHOUT NOX VARIABLE
 ```{r,echo=FALSE,warning=FALSE}
 # Simple backward regression
 model_3 <- glm(target ~ .-nox,family=binomial(link='logit'),data=train)
@@ -401,6 +454,33 @@ auc
 
 ```
 
+We still have a good model - the Residual Deviance increased to 182, but that is still much better than predicting with no model at all.  The AUC is now .89 - again, very good.  But the AUC with only one variable *nox* was .87.  And in certain trials the AUC with *nox* exceeded .95 (due to randomly selected evaluation samples).
 
-All Done!  
-  
+Why is the *nox* variable so powerful?  We can look back at the Correlation table for clues.  More variables are significantly correlated to *nox* than any other.  It is like a super-variable, somehow encapsulating the properties of the variables around it.  Is it because *nox* is an indicator of so many problems, like pollution, industrial decay, lax building codes?  The *nox* variable is a stellar example of a finding that opens up many paths for further research.  
+
+
+
+
+--------
+
+##Choose Model
+
+
+#### MODEL 3 WITH NOX VARIABLE USING FULL DATASETS
+```{r,echo=FALSE,warning=FALSE}
+# Simple backward regression
+model_fin <- glm(target ~ .,family=binomial(link='logit'),data=crime)
+backward <- step(model_fin)
+summary(backward)
+
+p <- predict(backward, newdata=subset(crime_eval,select=c(1,2,3,4,5,6,7,8,9,10,11,12,13)), type="response")
+
+#now what?  needs work here
+
+```
+
+
+
+
+
+The Smooth Operators
