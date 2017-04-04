@@ -28,6 +28,8 @@ library(ROCR)
 library(RCurl)
 library(knitr)
 library(Hmisc)
+library(caret)
+
 #
 # Read in the dataset from github
 crime <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/master/Homework3/data/crime-training-data.csv"),header=TRUE,na.strings=c(" "))
@@ -197,7 +199,7 @@ According to the description, the variables *zn*, *indus*, and *age* are area, o
   
 Based on our detailed review of the variables that contained outliers, the following variables could be problematic:  
   
-The predictor variable *zn* is highly right skewed, we can confirm this by comparing the median and mean where the median is 0.0, but the median is 11.58. The frequency count plot shows how poor the distribution is due to clustering of the data at one extreme.  
+The predictor variable *zn* is highly right skewed, we can confirm this by comparing the median and mean where the median is 0.0, but the mean is 11.58. The frequency count plot shows how poor the distribution is due to clustering of the data at one extreme.  
   
 The predictor variable *black* is highly left skewed. We can confirm this by comparing the median and mean where the median is 391.34 and the mean is 357.12. The frequency count plot shows how poor the distribution is due to clustering of the data at one extreme.  
   
@@ -339,6 +341,10 @@ auc <- performance(pr, measure = "auc")
 auc <- auc@y.values[[1]]
 summary(crime_model)
 auc  
+
+m1_prediction <- ifelse(p > 0.5, 1, 0)
+confusion_m1 <- confusionMatrix(data = m1_prediction, reference = test[,14])
+confusion_m1$table
 ```
 
 In this model we set aside 20% of the training data and use 80% to train the model.  we then use the model to predict the outcome of the remaining 20% of the data.  The model yields an Area Under Curve of .95, meaning it chose correctly 95% of the time.
@@ -400,6 +406,9 @@ auc <- performance(pr, measure = "auc")
 auc <- auc@y.values[[1]]
 auc  
 
+m2_prediction <- ifelse(p > 0.5, 1, 0)
+confusion_m2 <- confusionMatrix(data = m2_prediction, reference = test[,14])
+confusion_m2$table
 ```
   
 By combining three variables - *nox*, *rad* and *zn* - that is, the concentration of nitrogen oxides, access to radial highways and the proportion of land zoned for large lots, we can predict with 94% accuracy whether the crime rate at this property is above or below average.  Since this is very close to the performance of the model using all variables (95%), we can be confident in using these three variables for our decision support process, and disregarding the others.  
@@ -421,12 +430,18 @@ p <- predict(backward, newdata=subset(test,select=c(1,2,3,4,5,6,7,8,9,10,11,12,1
 pr <- prediction(p, test$target)
 prf <- performance(pr, measure = "tpr", x.measure = "fpr")
 plot(prf)
+abline(a = 0, b = 1)
+
 
 #
 auc <- performance(pr, measure = "auc")
 auc <- auc@y.values[[1]]
 auc
 
+
+m3_prediction <- ifelse(p > 0.5, 1, 0)
+confusion_m3 <- confusionMatrix(data = m3_prediction, reference = test[,14])
+confusion_m3$table
 ```
 
 The model reduces to nine variables and yields a nice low residual deviance of 133.9, compared to a null deviance of 515.3.  This roughly means that the model eliminates about 80% of the error compared to choosing at random.  The AUC is .947 which is roughly the same as the full model using all variables.  
@@ -446,6 +461,8 @@ p <- predict(backward, newdata=subset(test,select=c(1,2,3,4,5,6,7,8,9,10,11,12,1
 pr <- prediction(p, test$target)
 prf <- performance(pr, measure = "tpr", x.measure = "fpr")
 plot(prf)
+abline(a = 0, b = 1)
+
 
 #
 auc <- performance(pr, measure = "auc")
@@ -459,6 +476,23 @@ We still have a good model - the Residual Deviance increased to 182, but that is
 Why is the *nox* variable so powerful?  We can look back at the Correlation table for clues.  More variables are significantly correlated to *nox* than any other.  It is like a super-variable, somehow encapsulating the properties of the variables around it.  Is it because *nox* is an indicator of so many problems, like pollution, industrial decay, lax building codes?  The *nox* variable is a stellar example of a finding that opens up many paths for further research.  
 
 
+
+```{r,echo=FALSE,warning=FALSE}
+
+Parameters <- c("Accuracy", "Classification Error Rate", "Precision", "Sensitivity", "Specificity", "F1 Score")
+
+Model1 <- c(confusion_m1$overall["Accuracy"], 1 - confusion_m1$overall["Accuracy"], confusion_m1$byClass["Precision"], confusion_m1$byClass["Sensitivity"], confusion_m1$byClass["Specificity"], confusion_m1$byClass["F1"])
+
+
+Model2 <- c(confusion_m2$overall["Accuracy"], 1 - confusion_m2$overall["Accuracy"], confusion_m2$byClass["Precision"], confusion_m2$byClass["Sensitivity"], confusion_m2$byClass["Specificity"], confusion_m2$byClass["F1"])
+
+Model3 <- c(confusion_m3$overall["Accuracy"], 1 - confusion_m3$overall["Accuracy"], confusion_m3$byClass["Precision"], confusion_m3$byClass["Sensitivity"], confusion_m3$byClass["Specificity"], confusion_m3$byClass["F1"])
+
+
+model_summary <- data.frame(Parameters, Model1, Model2, Model3)
+kable(model_summary)
+
+```
 
 
 --------
