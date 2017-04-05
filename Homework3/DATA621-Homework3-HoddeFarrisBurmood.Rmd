@@ -2,7 +2,9 @@
 title: "DATA621-Homework3-HoddeFarrisBurmoodLin"
 author: "Rob Hodde, Matt Farris, Jeffrey Burmood, Bin Lin"
 date: "4/05/2017"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
   
 --------  
@@ -137,6 +139,8 @@ s <- sd(crime$rm)
 par(mfcol=c(1,3))
 hist(crime$rm,prob=TRUE,xlab="RM",main='')
 curve(dnorm(x,mean=m,sd=s),col="darkblue",lwd=2,add=TRUE)
+#let's look at a frequency count
+plot(table(crime$rm))
 # let's look at a plot of the values
 plot(crime$rm)
 ```  
@@ -148,6 +152,8 @@ s <- sd(crime$dis)
 par(mfcol=c(1,3))
 hist(crime$dis,prob=TRUE,xlab="DIS",main='')
 curve(dnorm(x,mean=m,sd=s),col="darkblue",lwd=2,add=TRUE)
+#let's look at a frequency count
+plot(table(crime$dis))
 # let's look at a plot of the values
 plot(crime$dis)
 ```  
@@ -172,6 +178,9 @@ s <- sd(crime$lstat)
 par(mfcol=c(1,3))
 hist(crime$lstat,prob=TRUE,xlab="LSTAT",main='')
 curve(dnorm(x,mean=m,sd=s),col="darkblue",lwd=2,add=TRUE)
+
+#let's look at a frequency count
+plot(table(crime$lstat))
 # let's look at a plot of the values
 plot(crime$lstat)
 ```  
@@ -183,6 +192,9 @@ s <- sd(crime$medv)
 par(mfcol=c(1,3))
 hist(crime$medv,prob=TRUE,xlab="MEDV",main='')
 curve(dnorm(x,mean=m,sd=s),col="darkblue",lwd=2,add=TRUE)
+
+#let's look at a frequency count
+plot(table(crime$medv))
 # let's look at a plot of the values
 plot(crime$medv)
 ```  
@@ -313,7 +325,7 @@ for(i in models){
 kable(data.frame(var,p_val,aic,auc))
 ```
 
-We examine the p-value (significance), the AIC statistic (goodness-of-fit) and the AUC (Area Under Curve) to measure the potential predictive value of each variable, so we can decide whether or not to include it in our multiple regression model.  We are looking for p-values below .05, AIC values as low as possible, and AUC values as high as possible.
+Here we see the selected output criteria for the linear models run with only a single predictor variable. We examine the p-value (significance), the AIC statistic (goodness-of-fit) and the AUC (Area Under Curve) to measure the potential predictive value of each variable, so we can decide whether or not to include it in our multiple regression model.  We are looking for p-values below .05, AIC values as low as possible, and AUC values as high as possible.
 
 From the above table, we can see that *chas* is the least likely to produce any meaningful inference because its p-value is well above .05 (not significant), it has the highest AIC (518, where 100 is considered excellent), and the lowest AUC (.54, where random chance would yield .50).  Therefore, *chas* is the most likely candidate to be removed from our model.  
 
@@ -347,7 +359,7 @@ confusion_m1 <- confusionMatrix(data = m1_prediction, reference = test[,14])
 confusion_m1$table
 ```
 
-In this model we set aside 20% of the training data and use 80% to train the model.  we then use the model to predict the outcome of the remaining 20% of the data.  The model yields an Area Under Curve of .95, meaning it chose correctly 95% of the time.
+In this model-and in all the models- we set aside 20% of the training data and use 80% to train the model we then use the model to predict the outcome of the remaining 20% of the data.  The model yields an Area Under Curve of .95, meaning it chose correctly 95% of the time.
 
 
 ### Model 2
@@ -371,6 +383,7 @@ p <- predict(qm, newdata=subset(test,select=c(4)), type="response")
 pr <- prediction(p, test$target)
 auc <- performance(pr, measure = "auc")
 auc <- auc@y.values[[1]]
+summary(qm)
 auc 
 
 ```
@@ -388,6 +401,7 @@ p <- predict(qm, newdata=subset(test,select=c(4,8)), type="response")
 pr <- prediction(p, test$target)
 auc <- performance(pr, measure = "auc")
 auc <- auc@y.values[[1]]
+summary(qm)
 auc  #.948
 
 ```
@@ -404,6 +418,7 @@ p <- predict(qm, newdata=subset(test,select=c(1,4,8)), type="response")
 pr <- prediction(p, test$target)
 auc <- performance(pr, measure = "auc")
 auc <- auc@y.values[[1]]
+summary(qm)
 auc  
 
 m2_prediction <- ifelse(p > 0.5, 1, 0)
@@ -506,21 +521,21 @@ kable(model_summary)
 ##Choose Model
 
 
-We like *Model 3 With Nox* the best because it eliminates most of the questionable variables - the ones with high skew and many outliers.  Ridding the model of these variables helps provide insurance against poor decisions that could arise, *even if they do not show up in the model.* 
+We like *Model 3 With Nox* the best because it eliminates some of the questionable variables - the ones with high skew and many outliers, also it eliminates the chas variable, which was shown earlier as being insignificant.  Ridding the model of these variables helps provide insurance against poor decisions that could arise, *even if they do not show up in the model.* 
 
 #### MODEL 3 WITH NOX VARIABLE USING FULL DATASETS
-```{r,echo=FALSE,warning=FALSE}
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3}
 # recreate the model using the same variables, but using the full dataset
 model_3 <- glm(target ~ zn+nox+age+dis+rad+tax+ptratio+black+medv,family=binomial(link='logit'),data=crime)
 summary(model_3)
-p <- predict(model_3, newdata=subset(crime_eval,select=c(1,2,3,4,5,6,7,8,9,10,11,12,13)), type="response")
+p <- predict(model_3, newdata=subset(crime_eval,select=c(1,4,6,7,8,9,10,11,13)), type="response")
 
 #now what?  needs work here
 predict.prob <- 1/exp(p)
 predict.result <- ifelse(predict.prob>=.50, 1, 0)
 
 crime_eval <- cbind(crime_eval,predict.prob,predict.result)
-kable(crime_eval)
+kable(crime_eval[,-c(2,3,5,12)])
 
 ```
 
