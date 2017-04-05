@@ -492,18 +492,24 @@ Why is the *nox* variable so powerful?  We can look back at the Correlation tabl
 Below is table illustrating the various fitness parameters that describe the effectiveness of the models.  All the models are good - from a practical perspective, there is no difference between them.  
 
 ```{r,echo=FALSE,warning=FALSE}
+# function to calculate the F1 score
+f1 <- function(s,p) {
+  (2*p*s)/(p+s)
+}
 
 Parameters <- c("Accuracy", "Classification Error Rate", "Precision", "Sensitivity", "Specificity", "F1 Score")
 
-Model1 <- c(confusion_m1$overall["Accuracy"], 1 - confusion_m1$overall["Accuracy"], confusion_m1$byClass["Precision"], confusion_m1$byClass["Sensitivity"], confusion_m1$byClass["Specificity"], confusion_m1$byClass["F1"])
+#Model1 <- c(confusion_m1$overall["Accuracy"], 1 - confusion_m1$overall["Accuracy"], confusion_m1$byClass["Pos Pred Value"], confusion_m1$byClass["Sensitivity"], confusion_m1$byClass["Specificity"], confusion_m1$byClass["F1"])
+Model1 <- c(confusion_m1$overall["Accuracy"], 1 - confusion_m1$overall["Accuracy"], confusion_m1$byClass["Pos Pred Value"], confusion_m1$byClass["Sensitivity"], confusion_m1$byClass["Specificity"], f1(confusion_m1$byClass["Sensitivity"],confusion_m1$byClass["Pos Pred Value"]))
 
+#Model2 <- c(confusion_m2$overall["Accuracy"], 1 - confusion_m2$overall["Accuracy"], confusion_m2$byClass["Pos Pred Value"], confusion_m2$byClass["Sensitivity"], confusion_m2$byClass["Specificity"], confusion_m2$byClass["F1"])
+Model2 <- c(confusion_m2$overall["Accuracy"], 1 - confusion_m2$overall["Accuracy"], confusion_m2$byClass["Pos Pred Value"], confusion_m2$byClass["Sensitivity"], confusion_m2$byClass["Specificity"], f1(confusion_m2$byClass["Sensitivity"],confusion_m2$byClass["Pos Pred Value"]))
 
-Model2 <- c(confusion_m2$overall["Accuracy"], 1 - confusion_m2$overall["Accuracy"], confusion_m2$byClass["Precision"], confusion_m2$byClass["Sensitivity"], confusion_m2$byClass["Specificity"], confusion_m2$byClass["F1"])
-
-Model3 <- c(confusion_m3$overall["Accuracy"], 1 - confusion_m3$overall["Accuracy"], confusion_m3$byClass["Precision"], confusion_m3$byClass["Sensitivity"], confusion_m3$byClass["Specificity"], confusion_m3$byClass["F1"])
-
+#Model3 <- c(confusion_m3$overall["Accuracy"], 1 - confusion_m3$overall["Accuracy"], confusion_m3$byClass["Pos Pred Value"], confusion_m3$byClass["Sensitivity"], confusion_m3$byClass["Specificity"], confusion_m3$byClass["F1"])
+Model3 <- c(confusion_m3$overall["Accuracy"], 1 - confusion_m3$overall["Accuracy"], confusion_m3$byClass["Pos Pred Value"], confusion_m3$byClass["Sensitivity"], confusion_m3$byClass["Specificity"], f1(confusion_m3$byClass["Sensitivity"],confusion_m3$byClass["Pos Pred Value"]))
 
 model_summary <- data.frame(Parameters, Model1, Model2, Model3)
+
 kable(model_summary)
 
 ```
