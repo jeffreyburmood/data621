@@ -1,8 +1,8 @@
 ---
 title: "DATA621-Homework3-HoddeFarrisBurmoodLin"
 author: "Rob Hodde, Matt Farris, Jeffrey Burmood, Bin Lin"
-date: "3/28/2017"
-output: pdf_document
+date: "4/05/2017"
+output: html_document
 ---
   
 --------  
@@ -475,7 +475,7 @@ We still have a good model - the Residual Deviance increased to 182, but that is
 
 Why is the *nox* variable so powerful?  We can look back at the Correlation table for clues.  More variables are significantly correlated to *nox* than any other.  It is like a super-variable, somehow encapsulating the properties of the variables around it.  Is it because *nox* is an indicator of so many problems, like pollution, industrial decay, lax building codes?  The *nox* variable is a stellar example of a finding that opens up many paths for further research.  
 
-
+Below is table illustrating the various fitness parameters that describe the effectiveness of the models.  All the models are good - from a practical perspective, there is no difference between them.  
 
 ```{r,echo=FALSE,warning=FALSE}
 
@@ -495,26 +495,34 @@ kable(model_summary)
 ```
 
 
+
+\begin{center}
+{\huge Choose Model}
+\end{center}
+
+
 --------
 
 ##Choose Model
 
 
+We like *Model 3 With Nox* the best because it eliminates most of the questionable variables - the ones with high skew and many outliers.  Ridding the model of these variables helps provide insurance against poor decisions that could arise, *even if they do not show up in the model.* 
+
 #### MODEL 3 WITH NOX VARIABLE USING FULL DATASETS
 ```{r,echo=FALSE,warning=FALSE}
-# Simple backward regression
-model_fin <- glm(target ~ .,family=binomial(link='logit'),data=crime)
-backward <- step(model_fin)
-summary(backward)
-
-p <- predict(backward, newdata=subset(crime_eval,select=c(1,2,3,4,5,6,7,8,9,10,11,12,13)), type="response")
+# recreate the model using the same variables, but using the full dataset
+model_3 <- glm(target ~ zn+nox+age+dis+rad+tax+ptratio+black+medv,family=binomial(link='logit'),data=crime)
+summary(model_3)
+p <- predict(model_3, newdata=subset(crime_eval,select=c(1,2,3,4,5,6,7,8,9,10,11,12,13)), type="response")
 
 #now what?  needs work here
+predict.prob <- 1/exp(p)
+predict.result <- ifelse(predict.prob>=.50, 1, 0)
+
+crime_eval <- cbind(crime_eval,predict.prob,predict.result)
+kable(crime_eval)
 
 ```
 
 
-
-
-
-The Smooth Operators
+The Smooth Operators of R Fusion Have Struck Again.
