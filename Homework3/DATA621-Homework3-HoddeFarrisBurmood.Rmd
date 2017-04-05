@@ -492,6 +492,7 @@ Why is the *nox* variable so powerful?  We can look back at the Correlation tabl
 Below is table illustrating the various fitness parameters that describe the effectiveness of the models.  All the models are good - from a practical perspective, there is no difference between them.  
 
 ```{r,echo=FALSE,warning=FALSE}
+
 # function to calculate the F1 score
 f1 <- function(s,p) {
   (2*p*s)/(p+s)
