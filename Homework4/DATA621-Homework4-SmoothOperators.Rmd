@@ -1,0 +1,548 @@
+---
+title: "DATA621-Homework4-SmoothOperators"
+author: "Rob Hodde, Matt Farris, Jeffrey Burmood, Bin Lin"
+date: "4/10/2017"
+output:
+  pdf_document: default
+---
+  
+--------  
+  
+###Problem Description
+
+The objective is to build multiple linear regression and binary logistic regression models on the training data to predict the probability that a person will crash their car and also the amount of money it will cost if the person does crash their car. 
+  
+Each record has two response variables. The first response variable, TARGET_FLAG, is a 1 or a 0. A “1” means that the person was in a car crash. A zero means that the person was not in a car crash. The second response variable is TARGET_AMT. This value is zero if the person did not crash their car. But if they did crash their car, this number will be a value greater than zero.  
+
+Using the training data set, evaluate the multiple linear regression model based on (a) mean squared error, (b) R2, (c) F-statistic, and (d) residual plots. For the binary logistic regression model, will use a metric such as log likelihood, AIC, ROC curve, etc.? Using the training data set, evaluate the binary logistic regression model based on (a) accuracy, (b) classification error rate, (c) precision, (d) sensitivity, (e) specificity, (f) F1 score, (g) AUC, and (h) confusion matrix. Make predictions using the evaluation data set.  
+  
+Approach Steps:
+  
+1) Build a logistic regression model based on the TARGET_FLAG response variable.  
+  
+2) Generate TARGET_FLAG predictions using the logistic regression model.  
+  
+3) Build a linear regression model based on the non-zero values of the TARGET_AMT response variable.  
+  
+4) Generate TARGET_AMT predictions using the linear regression model based on the non-zero values of the predicted TARGET_FLAG variable.  
+  
+  
+\begin{center}
+{\huge Data Exploration}
+\end{center}
+
+--------
+
+##Data Exploration
+
+
+```{r,include=FALSE,warning=FALSE}
+# Load required libraries
+library(ggplot2)
+library(ROCR)
+library(RCurl)
+library(knitr)
+library(Hmisc)
+library(caret)
+
+#
+# Read in the dataset from github
+ins <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/master/Homework4/data/insurance_training_data.csv"),header=TRUE,na.strings=c(" "))
+ins_eval <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/master/Homework4/data/insurance-evaluation-data.csv"),header=TRUE,na.strings=c(" "))
+
+```
+  
+![](./VariableDescription.png)
+
+Below is a summary of each predictor variable's basic statistics, followed by boxplots which illustrate the spread and outliers for each variable.    
+
+
+```{r,echo=FALSE,warning=FALSE}
+# First, remove the INDEX variable column since it's not used
+ins <- ins[2:length(ins)]
+# Next, get a general look at the data
+# Let's start by exploring the type of each variable
+types <- sapply(1:length(ins),function(x) typeof(ins[,x]))
+types.df <- data.frame(VAR=names(ins),TYPE=types)
+#kable(types.df)
+# Now generate some summary statistics
+kable(summary(ins[1:6]))
+kable(summary(ins[7:12]))
+kable(summary(ins[13:18]))
+kable(summary(ins[19:length(ins)]))
+# Visual check for obvious correlations
+#pairs(crime,col=crime$target)
+#
+# no NAs found so no missing values to remove or fix
+#
+# Look over the variables checking for outliers/influencial points, correlation between variables, etc. using box plots.
+#
+# set the plot-page configuration
+
+```
+
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+par(mfcol=c(1,3))
+boxplot(crime$zn, main="zn")
+boxplot(crime$indus, main="indus")
+boxplot(crime$nox, main="nox")
+```
+
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+par(mfcol=c(1,3))
+boxplot(crime$rm, main="rm")
+boxplot(crime$age, main="age")
+boxplot(crime$dis, main="dis")
+```
+
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+par(mfcol=c(1,3))
+
+boxplot(crime$rad, main="rad")
+boxplot(crime$tax, main="tax")
+boxplot(crime$ptratio, main="ptratio")
+```
+
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+par(mfcol=c(1,3))
+boxplot(crime$black, main="black")
+boxplot(crime$lstat, main="lstat")
+boxplot(crime$medv, main="mdev")
+```
+
+
+Based on an analysis of the box plots, the following variables have some outliers that may, or may not, exert influence on the regression results: 
+    - zn, rm, dis, black, lstat, medv  
+  
+We'll next look at these variables more closely, starting with their histograms and frequency counts to better understand the nature of their distribution.  
+
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+# zn
+m <- mean(crime$zn)
+s <- sd(crime$zn)
+par(mfcol=c(1,3))
+hist(crime$zn,prob=TRUE,xlab="ZN",main='')
+curve(dnorm(x,mean=m,sd=s),col="darkblue",lwd=2,add=TRUE)
+# zn is so skewed, let's look at a frequency count
+plot(table(crime$zn))
+# let's look at a plot of the values
+plot(crime$zn)
+
+```  
+
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+# rm
+m <- mean(crime$rm)
+s <- sd(crime$rm)
+par(mfcol=c(1,3))
+hist(crime$rm,prob=TRUE,xlab="RM",main='')
+curve(dnorm(x,mean=m,sd=s),col="darkblue",lwd=2,add=TRUE)
+#let's look at a frequency count
+plot(table(crime$rm))
+# let's look at a plot of the values
+plot(crime$rm)
+```  
+
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+# dis
+m <- mean(crime$dis)
+s <- sd(crime$dis)
+par(mfcol=c(1,3))
+hist(crime$dis,prob=TRUE,xlab="DIS",main='')
+curve(dnorm(x,mean=m,sd=s),col="darkblue",lwd=2,add=TRUE)
+#let's look at a frequency count
+plot(table(crime$dis))
+# let's look at a plot of the values
+plot(crime$dis)
+```  
+
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+# black
+m <- mean(crime$black)
+s <- sd(crime$black)
+par(mfcol=c(1,3))
+hist(crime$black,prob=TRUE,xlab="BLACK",main='')
+curve(dnorm(x,mean=m,sd=s),col="darkblue",lwd=2,add=TRUE)
+# black is so skewed, let's look at a frequency count
+plot(table(crime$black))
+# let's look at a plot of the values
+plot(crime$black)
+```  
+
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+# lstat
+m <- mean(crime$lstat)
+s <- sd(crime$lstat)
+par(mfcol=c(1,3))
+hist(crime$lstat,prob=TRUE,xlab="LSTAT",main='')
+curve(dnorm(x,mean=m,sd=s),col="darkblue",lwd=2,add=TRUE)
+
+#let's look at a frequency count
+plot(table(crime$lstat))
+# let's look at a plot of the values
+plot(crime$lstat)
+```  
+
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+# medv
+m <- mean(crime$medv)
+s <- sd(crime$medv)
+par(mfcol=c(1,3))
+hist(crime$medv,prob=TRUE,xlab="MEDV",main='')
+curve(dnorm(x,mean=m,sd=s),col="darkblue",lwd=2,add=TRUE)
+
+#let's look at a frequency count
+plot(table(crime$medv))
+# let's look at a plot of the values
+plot(crime$medv)
+```  
+
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+
+
+# quick look at model with all variables
+crime.model <- glm(target ~ .,family=binomial(link='logit'),data=crime)
+
+```
+  
+According to the description, the variables *zn*, *indus*, and *age* are area, or land, proportions. According to the statistical summary, the values for these variables are all within the range [1,100] that we would expect.  
+  
+Based on our detailed review of the variables that contained outliers, the following variables could be problematic:  
+  
+The predictor variable *zn* is highly right skewed, we can confirm this by comparing the median and mean where the median is 0.0, but the mean is 11.58. The frequency count plot shows how poor the distribution is due to clustering of the data at one extreme.  
+  
+The predictor variable *black* is highly left skewed. We can confirm this by comparing the median and mean where the median is 391.34 and the mean is 357.12. The frequency count plot shows how poor the distribution is due to clustering of the data at one extreme.  
+  
+The predictor variable *dis* is slightly right skewed. We can confirm this by comparing the median and mean where the median is 3.191 and the mean is 3.796.  
+  
+Fortunately, no missing data, or NAs, were found.  
+  
+The following data corrections were identified in this section:  
+  
+(1) The predictor variable *chas* and the response variable *target* are categorical (binary), so we need to convert them to factors.  
+  
+(2) Need to determine if there are other variables highly coorelated with the *zn* or *black* variables that do not have the severe skew and outliers. This could allow us to remove the *zn* or *black* variables from the model.  
+
+
+\begin{center}
+{\huge Data Preparation}
+\end{center}
+
+--------
+
+##Data Preparation
+
+
+The variable changes we identified so far include converting the predictor variable *chas* and the response variable *target* to factors.  Next we will look at how each variable correlates to all the others:  
+
+  
+```{r,echo=FALSE,warning=FALSE,eval=FALSE}
+# Based on the data exploration results, identify any changes, transformations, and new or deleted variables to use for the next step of building the models.
+# Need to set variables to a factor as required
+crime$target <- as.factor(crime$target)
+crime$chas <- as.factor(crime$chas)
+crime_eval$chas <- as.factor(crime_eval$chas)
+
+# get a table of non-factor variables
+crime.nofactor <- subset(crime,select=-c(chas,target))
+# build a correlation table to study the variable relationships
+cor.table <- cor(crime.nofactor) # build a table of inter-variable correlation values
+kable(cor.table[,1:6])
+kable(cor.table[,7:12])
+```
+  
+The correlation table above shows that the variable *zn* is moderately correlated to the variable *dis*. The plot of the *dis* data shows a much better distribution of values. Consequently, one possibility is to remove *zn* from the model and use *dis* instead.  Before doing this, we should look at the real-world context of the two variables to determine if they are meaningfully related.
+
+
+\begin{center}
+{\huge Build Models}
+\end{center}
+
+--------
+
+##Build Models
+
+One method of developing multiple regression models is to take a stepwise approach.  To accomplish this, we combine our knowledge from the data exploration above with logistic regression. Univariate Logistic Regression is a useful method to understand how each predictor variable interacts individually with the target (response) variable. Looking at various statistics, we determine which variable may impact our target the most.
+
+```{r,echo=FALSE,warning=FALSE,eval=FALSE}
+## 80% of the sample size
+set.seed(121)
+smp_size <- floor(0.80 * nrow(crime))
+
+## set the seed to make your partition reproductible
+train_ind <- sample(seq_len(nrow(crime)), size = smp_size)
+
+train <- crime[train_ind, ]
+test <- crime[-train_ind, ]
+
+# quick look at model with all variables
+
+zn_uni_model<- glm(target ~ zn,family=binomial(link='logit'),data=train)           
+indus_uni_model<- glm(target ~ indus,family=binomial(link='logit'),data=train)       
+chas_uni_model<- glm(target ~ chas,family=binomial(link='logit'),data=train)        
+nox_uni_model<- glm(target ~ nox,family=binomial(link='logit'),data=train)        
+rm_uni_model<- glm(target ~ rm,family=binomial(link='logit'),data=train)          
+age_uni_model<- glm(target ~ age,family=binomial(link='logit'),data=train)          
+dis_uni_model<- glm(target ~ dis,family=binomial(link='logit'),data=train)            
+rad_uni_model<- glm(target ~ rad,family=binomial(link='logit'),data=train)           
+tax_uni_model<- glm(target ~ tax,family=binomial(link='logit'),data=train)            
+ptratio_uni_model<- glm(target ~ ptratio,family=binomial(link='logit'),data=train)      
+black_uni_model<- glm(target ~ black,family=binomial(link='logit'),data=train)       
+lstat_uni_model<- glm(target ~ lstat,family=binomial(link='logit'),data=train)       
+
+
+models <- list(zn_uni_model,indus_uni_model,
+            chas_uni_model,nox_uni_model,
+            rm_uni_model,age_uni_model,
+            dis_uni_model,rad_uni_model,
+            tax_uni_model,ptratio_uni_model,
+            black_uni_model,lstat_uni_model)
+
+```
+  
+```{r,echo=FALSE,eval=FALSE}
+#Creation of lists 
+var <- c()
+p_val <- c()
+aic <- c()
+auc <- c()
+
+#For loop to run variables over univarate glms
+for(i in models){
+  var <- c(var,variable.names(i)[2])
+  aic <- c(aic,i$aic)
+  p_val <- c(p_val,summary(i)$coef[2, "Pr(>|z|)"])
+  p <- predict(i, newdata=subset(test,select=c(1,2,3,4,5,6,7,8,9,10,11,12,13)), type="response")
+  pr <- prediction(p, test$target)
+  prf <- performance(pr, measure = "tpr", x.measure = "fpr")
+  auc_perf<- performance(pr, measure = "auc")
+  auc_val <- auc_perf@y.values[[1]]
+  auc <- c(auc,auc_val)
+}
+
+kable(data.frame(var,p_val,aic,auc))
+```
+
+Here we see the selected output criteria for the linear models run with only a single predictor variable. We examine the p-value (significance), the AIC statistic (goodness-of-fit) and the AUC (Area Under Curve) to measure the potential predictive value of each variable, so we can decide whether or not to include it in our multiple regression model.  We are looking for p-values below .05, AIC values as low as possible, and AUC values as high as possible.
+
+From the above table, we can see that *chas* is the least likely to produce any meaningful inference because its p-value is well above .05 (not significant), it has the highest AIC (518, where 100 is considered excellent), and the lowest AUC (.54, where random chance would yield .50).  Therefore, *chas* is the most likely candidate to be removed from our model.  
+
+
+
+### Model 1 
+
+As a baseline, we start with a multiple logistic regression model that includes every predictor variable:
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+# quick look at model with all variables
+## 80% of the sample size
+set.seed(121)
+smp_size <- floor(0.80 * nrow(crime))
+## set the seed to make your partition reproductible
+train_ind <- sample(seq_len(nrow(crime)), size = smp_size)
+
+train <- crime[train_ind, ]
+test <- crime[-train_ind, ]
+
+crime_model <- glm(target ~ .,family=binomial(link='logit'),data=train)
+
+p <- predict(crime_model, newdata=subset(test,select=c(1:13)), type="response")
+pr <- prediction(p, test$target)
+auc <- performance(pr, measure = "auc")
+auc <- auc@y.values[[1]]
+summary(crime_model)
+auc  
+
+m1_prediction <- ifelse(p > 0.5, 1, 0)
+confusion_m1 <- confusionMatrix(data = m1_prediction, reference = test[,14])
+confusion_m1$table
+```
+
+In this model-and in all the models- we set aside 20% of the training data and use 80% to train the model we then use the model to predict the outcome of the remaining 20% of the data.  The model yields an Area Under Curve of .95, meaning it chose correctly 95% of the time.
+
+
+### Model 2
+  
+In this scenario we attempt to create the simplest model possible by using only one variable - the one that provides the highest overall AUC (performance) by itself.  We calculate AUC for each variable separately and then select the highest result. 
+
+```{r,echo=FALSE,eval=FALSE}
+## 75% of the sample size
+set.seed(121)
+smp_size <- floor(0.80 * nrow(crime))
+
+## set the seed to make your partition reproductible
+train_ind <- sample(seq_len(nrow(crime)), size = smp_size)
+
+train <- crime[train_ind, ]
+test <- crime[-train_ind, ]
+
+#show the AUC for the most valuable variable - nox (nitrogen oxides concentration - ie: poisoned environment) 
+qm <- glm(target ~ nox,family=binomial(link='logit'),data=train)
+p <- predict(qm, newdata=subset(test,select=c(4)), type="response")
+pr <- prediction(p, test$target)
+auc <- performance(pr, measure = "auc")
+auc <- auc@y.values[[1]]
+summary(qm)
+auc 
+
+```
+  
+The best predictor variable is *nox*, yielding an AUC of .87.  
+  
+
+Next we combine *nox* with each of the remaining variables individually and select the highest AUC result.
+  
+```{r,echo=FALSE,eval=FALSE}
+
+#show the AUC for the best combination of two variables - nox and rad
+qm <- glm(target ~ nox + rad,family=binomial(link='logit'),data=train)
+p <- predict(qm, newdata=subset(test,select=c(4,8)), type="response")
+pr <- prediction(p, test$target)
+auc <- performance(pr, measure = "auc")
+auc <- auc@y.values[[1]]
+summary(qm)
+auc  #.948
+
+```
+
+We find that *nox* plus *rad* is the strongest combinaton of two variables, yielding an AUC of .93.
+
+Finally, we search for a third critical predictor by combining *nos* plus *rad* with the remaining variables, individually.  
+  
+```{r,echo=FALSE,eval=FALSE}
+
+#show the AUC for the best combination of three variables - nox, rad and zn
+qm <- glm(target ~ nox + rad + zn,family=binomial(link='logit'),data=train)
+p <- predict(qm, newdata=subset(test,select=c(1,4,8)), type="response")
+pr <- prediction(p, test$target)
+auc <- performance(pr, measure = "auc")
+auc <- auc@y.values[[1]]
+summary(qm)
+auc  
+
+m2_prediction <- ifelse(p > 0.5, 1, 0)
+confusion_m2 <- confusionMatrix(data = m2_prediction, reference = test[,14])
+confusion_m2$table
+```
+  
+By combining three variables - *nox*, *rad* and *zn* - that is, the concentration of nitrogen oxides, access to radial highways and the proportion of land zoned for large lots, we can predict with 94% accuracy whether the crime rate at this property is above or below average.  Since this is very close to the performance of the model using all variables (95%), we can be confident in using these three variables for our decision support process, and disregarding the others.  
+  
+
+###Model 3
+
+The GLM Model summary in Model 1 illustrates the outsize impact of the predictor variable *nox* compared to all the others.  It carries an Estimate of 53.3 where the next closest in magnitude is only 1.2.  We thought it would be interesting to remove *nox* from the model just to see how the other variables perform without it.  First we will perform a simple backward variable selection optimization process including it.
+
+
+#### MODEL 3 WITH NOX VARIABLE
+```{r,echo=FALSE,warning=FALSE,eval=FALSE}
+# Simple backward regression
+model_3 <- glm(target ~ .,family=binomial(link='logit'),data=train)
+backward <- step(model_3)
+summary(backward)
+
+p <- predict(backward, newdata=subset(test,select=c(1,2,3,4,5,6,7,8,9,10,11,12,13)), type="response")
+pr <- prediction(p, test$target)
+prf <- performance(pr, measure = "tpr", x.measure = "fpr")
+plot(prf)
+abline(a = 0, b = 1)
+
+
+#
+auc <- performance(pr, measure = "auc")
+auc <- auc@y.values[[1]]
+auc
+
+
+m3_prediction <- ifelse(p > 0.5, 1, 0)
+confusion_m3 <- confusionMatrix(data = m3_prediction, reference = test[,14])
+confusion_m3$table
+```
+
+The model reduces to nine variables and yields a nice low residual deviance of 133.9, compared to a null deviance of 515.3.  This roughly means that the model eliminates about 80% of the error compared to choosing at random.  The AUC is .947 which is roughly the same as the full model using all variables.  
+
+
+Let's look at what happens when we remove the *nox* variable:
+
+
+#### MODEL 3 WITHOUT NOX VARIABLE
+```{r,echo=FALSE,warning=FALSE,eval=FALSE}
+# Simple backward regression
+model_3 <- glm(target ~ .-nox,family=binomial(link='logit'),data=train)
+backward <- step(model_3)
+summary(backward)
+
+p <- predict(backward, newdata=subset(test,select=c(1,2,3,4,5,6,7,8,9,10,11,12,13)), type="response")
+pr <- prediction(p, test$target)
+prf <- performance(pr, measure = "tpr", x.measure = "fpr")
+plot(prf)
+abline(a = 0, b = 1)
+
+
+#
+auc <- performance(pr, measure = "auc")
+auc <- auc@y.values[[1]]
+auc
+
+```
+
+We still have a good model - the Residual Deviance increased to 182, but that is still much better than predicting with no model at all.  The AUC is now .89 - again, very good.  But the AUC with only one variable *nox* was .87.  And in certain trials the AUC with *nox* exceeded .95 (due to randomly selected evaluation samples).
+
+Why is the *nox* variable so powerful?  We can look back at the Correlation table for clues.  More variables are significantly correlated to *nox* than any other.  It is like a super-variable, somehow encapsulating the properties of the variables around it.  Is it because *nox* is an indicator of so many problems, like pollution, industrial decay, lax building codes?  The *nox* variable is a stellar example of a finding that opens up many paths for further research.  
+
+Below is table illustrating the various fitness parameters that describe the effectiveness of the models.  All the models are good - from a practical perspective, there is no difference between them.  
+
+```{r,echo=FALSE,warning=FALSE,eval=FALSE}
+# function to calculate the F1 score
+f1 <- function(s,p) {
+  (2*p*s)/(p+s)
+}
+
+Parameters <- c("Accuracy", "Classification Error Rate", "Precision", "Sensitivity", "Specificity", "F1 Score")
+
+#Model1 <- c(confusion_m1$overall["Accuracy"], 1 - confusion_m1$overall["Accuracy"], confusion_m1$byClass["Pos Pred Value"], confusion_m1$byClass["Sensitivity"], confusion_m1$byClass["Specificity"], confusion_m1$byClass["F1"])
+Model1 <- c(confusion_m1$overall["Accuracy"], 1 - confusion_m1$overall["Accuracy"], confusion_m1$byClass["Pos Pred Value"], confusion_m1$byClass["Sensitivity"], confusion_m1$byClass["Specificity"], f1(confusion_m1$byClass["Sensitivity"],confusion_m1$byClass["Pos Pred Value"]))
+
+#Model2 <- c(confusion_m2$overall["Accuracy"], 1 - confusion_m2$overall["Accuracy"], confusion_m2$byClass["Pos Pred Value"], confusion_m2$byClass["Sensitivity"], confusion_m2$byClass["Specificity"], confusion_m2$byClass["F1"])
+Model2 <- c(confusion_m2$overall["Accuracy"], 1 - confusion_m2$overall["Accuracy"], confusion_m2$byClass["Pos Pred Value"], confusion_m2$byClass["Sensitivity"], confusion_m2$byClass["Specificity"], f1(confusion_m2$byClass["Sensitivity"],confusion_m2$byClass["Pos Pred Value"]))
+
+#Model3 <- c(confusion_m3$overall["Accuracy"], 1 - confusion_m3$overall["Accuracy"], confusion_m3$byClass["Pos Pred Value"], confusion_m3$byClass["Sensitivity"], confusion_m3$byClass["Specificity"], confusion_m3$byClass["F1"])
+Model3 <- c(confusion_m3$overall["Accuracy"], 1 - confusion_m3$overall["Accuracy"], confusion_m3$byClass["Pos Pred Value"], confusion_m3$byClass["Sensitivity"], confusion_m3$byClass["Specificity"], f1(confusion_m3$byClass["Sensitivity"],confusion_m3$byClass["Pos Pred Value"]))
+
+model_summary <- data.frame(Parameters, Model1, Model2, Model3)
+
+kable(model_summary)
+
+```
+
+
+
+\begin{center}
+{\huge Choose Model}
+\end{center}
+
+
+--------
+
+##Choose Model
+
+
+We like *Model 3 With Nox* the best because it eliminates some of the questionable variables - the ones with high skew and many outliers, also it eliminates the chas variable, which was shown earlier as being insignificant.  Ridding the model of these variables helps provide insurance against poor decisions that could arise, *even if they do not show up in the model.* 
+
+#### MODEL 3 WITH NOX VARIABLE USING FULL DATASETS
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+# recreate the model using the same variables, but using the full dataset
+model_3 <- glm(target ~ zn+nox+age+dis+rad+tax+ptratio+black+medv,family=binomial(link='logit'),data=crime)
+summary(model_3)
+p <- predict(model_3, newdata=subset(crime_eval,select=c(1,4,6,7,8,9,10,11,13)), type="response")
+
+#predict.prob <- 1/exp(p)
+#predict.prob <- 1/(1+exp(-p))
+predict.prob <- p
+predict.result <- ifelse(predict.prob>=.50, 1, 0)
+
+crime_eval <- cbind(crime_eval,predict.prob,predict.result)
+kable(crime_eval[,-c(2,3,5,12)])
+
+```
+
+
+The Smooth Operators of R Fusion Have Struck Again.
