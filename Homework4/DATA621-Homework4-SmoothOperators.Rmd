@@ -44,7 +44,8 @@ library(RCurl)
 library(knitr)
 library(Hmisc)
 library(caret)
-
+library(stringr)
+library(Amelia)
 #
 # Read in the dataset from github
 ins <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/master/Homework4/data/insurance_training_data.csv"),header=TRUE,na.strings=c(" "))
@@ -53,11 +54,119 @@ ins_eval <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmo
 ```
   
 ![](./VariableDescription.png)
+  
+
+```{r,echo=FALSE,warning=FALSE}
+
+#DATA CLEANSING
+
+#FUNCTIONS
+#convert character values to numeric 
+sToNum <- function(a){
+  a <- gsub("[$]","", a)
+  a <- gsub("[,]","", a)
+  a <- as.numeric(a)
+  return(a)
+}
+#convert binary choices to numeric 1,0.   1 being the less likely to be in accident
+sToBLN <- function(a){
+  a <- gsub("No","0", a)
+  a <- gsub("Yes", "1", a)
+  a <- gsub("no","0", a)
+  a <- gsub("yes", "1", a)
+  a <- gsub("M","0", a)
+  a <- gsub("F", "1", a)
+  a <- gsub("Commercial","0", a)
+  a <- gsub("Private", "1", a)
+  a <- gsub("Rural", "0", a)
+  a <- gsub("Urban","1", a)
+  a <- as.numeric(a)
+  return(a)
+}
+
+#use this when a "YES" answer is a bad thing, like prior accidents or license revoked
+sToBLN_Reverse <- function(a){
+  a <- gsub("No","1", a)
+  a <- gsub("Yes", "0", a)
+  a <- gsub("no","1", a)
+  a <- gsub("yes", "0", a)
+  a <- as.numeric(a)
+  return(a)
+}
+
+
+
+#MAKE A COPY OF THE IMPORTED TRAINING DATA FRAME
+insc <- ins 
+
+#clean up unfriendly values
+insc$MSTATUS   <- str_replace(insc$MSTATUS, pattern = "z_No", replacement = "No")
+insc$SEX       <- str_replace(insc$SEX, pattern = "z_F", replacement = "F")
+insc$EDUCATION <- str_replace(insc$EDUCATION, pattern = "z_High School", replacement = "Secondary")
+insc$EDUCATION <- str_replace(insc$EDUCATION, pattern = "<High School", replacement = "Primary")
+insc$JOB       <- str_replace(insc$JOB, pattern = "z_Blue Collar", replacement = "Tradesperson")
+insc$CAR_TYPE  <- str_replace(insc$CAR_TYPE, pattern = "z_SUV", replacement = "SUV")
+insc$URBANICITY <- str_replace(insc$URBANICITY, pattern = "Highly Urban/ Urban", replacement = "Urban")
+insc$URBANICITY <- str_replace(insc$URBANICITY, pattern = "z_Highly Rural/ Rural", replacement = "Rural")
+
+insc$CAR_AGE[insc$CARE_AGE < 0 ] <- 0  #If car age is below zero, set to zero
+insc$TARGET_AMT <- round(insc$TARGET_AMT,digits = 0) #Round Target Claim to nearest dollar
+
+#Convert data that is errantly classed as character to numeric: INCOME, HOME_VAL, BLUEBOOK, OLDCLAIM
+insc$INCOME   <- sToNum(insc$INCOME)
+insc$HOME_VAL <- sToNum(insc$HOME_VAL)
+insc$BLUEBOOK <- sToNum(insc$BLUEBOOK)
+insc$OLDCLAIM <- sToNum(insc$OLDCLAIM)
+
+#create numeric representations of the "binary choice" variables so they can be support multiple imputation (filling in NA values)
+insc$blnPARENT1 <- sToBLN(insc$PARENT1)
+insc$blnMSTATUS <- sToBLN(insc$MSTATUS)
+insc$blnSEX     <- sToBLN(insc$SEX)
+insc$blnCAR_USE <- sToBLN(insc$CAR_USE)
+insc$blnNOT_RED_CAR <- sToBLN_Reverse(insc$RED_CAR) #Since having a red car increases likelihood of accident, use reverse boolean
+insc$blnNOT_REVOKED <- sToBLN_Reverse(insc$REVOKED)
+insc$blnURBANICITY <- sToBLN(insc$URBANICITY)
+
+#CREATE numeric representations of the categorical variables (to support multiple imputation) 
+#Education: 1-Primary, 2-Secondary, 3-Bachelors, 4-Masters, 5-PhD
+educ <- data.frame(EDUCATION = c("Primary","Secondary","Bachelors","Masters","PhD"), intEDUCATION = c(1,2,3,4,5))
+insc$intEDUCATION <- educ$intEDUCATION[match(insc$EDUCATION,educ$EDUCATION)]
+#Job - 1 is lowest income, 8 is highest:
+job <- data.frame(JOB = c("Student","Home Maker","Clerical","Tradesperson","Professional","Manager","Lawyer","Doctor"), intJOB = c(1,2,3,4,5,6,7,8))
+insc$intJOB <- job$intJOB[match(insc$JOB, job$JOB)]
+#Vehicle Type  by avg blue book: 1-Sports Car has lowest blue book, Panel Truck has highest
+typ <- data.frame(CAR_TYPE = c("Sports Car","SUV","Pickup","Minivan","Van","Panel Truck"), intCAR_TYPE = c(1,2,3,4,5,6)) 
+insc$intCAR_TYPE <- typ$intCAR_TYPE[match(insc$CAR_TYPE, typ$CAR_TYPE)]
+
+print("Summary for insc")
+summary(insc) #Show the new attributes and corrections
+
+
+#IMPUTE missing values
+
+#first we must make a dataframe with numeric-only fields
+insi <- subset(insc,select = c("INDEX", "TARGET_FLAG", "TARGET_AMT", "KIDSDRIV", "AGE", "HOMEKIDS", "YOJ", "INCOME", "HOME_VAL", "TRAVTIME", "BLUEBOOK", "TIF", "OLDCLAIM", "CLM_FREQ", "MVR_PTS", "CAR_AGE", "blnPARENT1", "blnMSTATUS", "blnSEX", "blnCAR_USE", "blnNOT_RED_CAR", "blnNOT_REVOKED", "blnURBANICITY", "intEDUCATION", "intJOB", "intCAR_TYPE"))
+
+print("Summary for insi")
+summary(insi)
+
+
+#use the Amelia II package to create the imputations
+a.ins <- amelia(insi, m = 1, ts = "INDEX", cs = "TARGET_AMT")
+#a.ins$imputations$imp1
+a.i <- a.ins$imputations$imp1 
+
+head(a.i)
+
+summary(a.i)
+
+```
+
 
 Below is a summary of each predictor variable's basic statistics, followed by boxplots which illustrate the spread and outliers for each variable.    
 
 
-```{r,echo=FALSE,warning=FALSE}
+```{r,echo=FALSE,warning=FALSE,eval=FALSE}
 # First, remove the INDEX variable column since it's not used
 ins <- ins[2:length(ins)]
 # Next, get a general look at the data
