@@ -2,9 +2,8 @@
 title: "DATA621-Homework4-SmoothOperators"
 author: "Rob Hodde, Matt Farris, Jeffrey Burmood, Bin Lin"
 date: "4/10/2017"
-output:
-  pdf_document: default
----
+output:  pdf_document
+  
   
 --------  
   
@@ -12,7 +11,7 @@ output:
 
 The objective is to build multiple linear regression and binary logistic regression models on the training data to predict the probability that a person will crash their car and also the amount of money it will cost if the person does crash their car. 
   
-Each record has two response variables. The first response variable, TARGET_FLAG, is a 1 or a 0. A “1” means that the person was in a car crash. A zero means that the person was not in a car crash. The second response variable is TARGET_AMT. This value is zero if the person did not crash their car. But if they did crash their car, this number will be a value greater than zero.  
+Each record has two response variables. The first response variable, TARGET_FLAG, is a 1 or a 0. A "1" means that the person was in a car crash. A zero means that the person was not in a car crash. The second response variable is TARGET_AMT. This value is zero if the person did not crash their car. But if they did crash their car, this number will be a value greater than zero.  
 
 Using the training data set, evaluate the multiple linear regression model based on (a) mean squared error, (b) R2, (c) F-statistic, and (d) residual plots. For the binary logistic regression model, will use a metric such as log likelihood, AIC, ROC curve, etc.? Using the training data set, evaluate the binary logistic regression model based on (a) accuracy, (b) classification error rate, (c) precision, (d) sensitivity, (e) specificity, (f) F1 score, (g) AUC, and (h) confusion matrix. Make predictions using the evaluation data set.  
   
@@ -45,18 +44,21 @@ library(knitr)
 library(Hmisc)
 library(caret)
 library(stringr)
-library(Amelia)
+##library(Amelia)
+##library(Hmisc)
+##library(mi)
+library(mice)
+
 #
 # Read in the dataset from github
-ins <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/master/Homework4/data/insurance_training_data.csv"),header=TRUE,na.strings=c(" "))
-ins_eval <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/master/Homework4/data/insurance-evaluation-data.csv"),header=TRUE,na.strings=c(" "))
+ins <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/master/Homework4/data/insurance_training_data.csv"),header=TRUE,na.strings=c(""," "), stringsAsFactors = FALSE)
+ins_eval <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/master/Homework4/data/insurance-evaluation-data.csv"),header=TRUE,na.strings=c(""," "), stringsAsFactors = FALSE)
 
 ```
   
 ![](./VariableDescription.png)
-  
 
-```{r,echo=FALSE,warning=FALSE}
+```{r}
 
 #DATA CLEANSING
 
@@ -100,32 +102,33 @@ sToBLN_Reverse <- function(a){
 insc <- ins 
 
 #clean up unfriendly values
-insc$MSTATUS   <- str_replace(insc$MSTATUS, pattern = "z_No", replacement = "No")
-insc$SEX       <- str_replace(insc$SEX, pattern = "z_F", replacement = "F")
-insc$EDUCATION <- str_replace(insc$EDUCATION, pattern = "z_High School", replacement = "Secondary")
-insc$EDUCATION <- str_replace(insc$EDUCATION, pattern = "<High School", replacement = "Primary")
-insc$JOB       <- str_replace(insc$JOB, pattern = "z_Blue Collar", replacement = "Tradesperson")
-insc$CAR_TYPE  <- str_replace(insc$CAR_TYPE, pattern = "z_SUV", replacement = "SUV")
+insc$MSTATUS    <- str_replace(insc$MSTATUS, pattern = "z_No", replacement = "No")
+insc$SEX        <- str_replace(insc$SEX, pattern = "z_F", replacement = "F")
+insc$EDUCATION  <- str_replace(insc$EDUCATION, pattern = "z_High School", replacement = "Secondary")
+insc$EDUCATION  <- str_replace(insc$EDUCATION, pattern = "<High School", replacement = "Primary")
+insc$JOB        <- str_replace(insc$JOB, pattern = "z_Blue Collar", replacement = "Tradesperson")
+insc$CAR_TYPE   <- str_replace(insc$CAR_TYPE, pattern = "z_SUV", replacement = "SUV")
 insc$URBANICITY <- str_replace(insc$URBANICITY, pattern = "Highly Urban/ Urban", replacement = "Urban")
 insc$URBANICITY <- str_replace(insc$URBANICITY, pattern = "z_Highly Rural/ Rural", replacement = "Rural")
 
-insc$CAR_AGE[insc$CARE_AGE < 0 ] <- 0  #If car age is below zero, set to zero
+insc$CAR_AGE[insc$CAR_AGE < 0 ] <- 0  #If car age is below zero, set to zero
 insc$TARGET_AMT <- round(insc$TARGET_AMT,digits = 0) #Round Target Claim to nearest dollar
 
 #Convert data that is errantly classed as character to numeric: INCOME, HOME_VAL, BLUEBOOK, OLDCLAIM
-insc$INCOME   <- sToNum(insc$INCOME)
-insc$HOME_VAL <- sToNum(insc$HOME_VAL)
-insc$BLUEBOOK <- sToNum(insc$BLUEBOOK)
-insc$OLDCLAIM <- sToNum(insc$OLDCLAIM)
+insc$TARGET_FLAG <- sToNum(insc$TARGET_FLAG)
+insc$INCOME      <- sToNum(insc$INCOME)
+insc$HOME_VAL    <- sToNum(insc$HOME_VAL)
+insc$BLUEBOOK    <- sToNum(insc$BLUEBOOK)
+insc$OLDCLAIM    <- sToNum(insc$OLDCLAIM)
 
 #create numeric representations of the "binary choice" variables so they can be support multiple imputation (filling in NA values)
-insc$blnPARENT1 <- sToBLN(insc$PARENT1)
-insc$blnMSTATUS <- sToBLN(insc$MSTATUS)
-insc$blnSEX     <- sToBLN(insc$SEX)
-insc$blnCAR_USE <- sToBLN(insc$CAR_USE)
+insc$blnPARENT1     <- sToBLN(insc$PARENT1)
+insc$blnMSTATUS     <- sToBLN(insc$MSTATUS)
+insc$blnSEX         <- sToBLN(insc$SEX)
+insc$blnCAR_USE     <- sToBLN(insc$CAR_USE)
 insc$blnNOT_RED_CAR <- sToBLN_Reverse(insc$RED_CAR) #Since having a red car increases likelihood of accident, use reverse boolean
 insc$blnNOT_REVOKED <- sToBLN_Reverse(insc$REVOKED)
-insc$blnURBANICITY <- sToBLN(insc$URBANICITY)
+insc$blnURBANICITY  <- sToBLN(insc$URBANICITY)
 
 #CREATE numeric representations of the categorical variables (to support multiple imputation) 
 #Education: 1-Primary, 2-Secondary, 3-Bachelors, 4-Masters, 5-PhD
@@ -138,53 +141,81 @@ insc$intJOB <- job$intJOB[match(insc$JOB, job$JOB)]
 typ <- data.frame(CAR_TYPE = c("Sports Car","SUV","Pickup","Minivan","Van","Panel Truck"), intCAR_TYPE = c(1,2,3,4,5,6)) 
 insc$intCAR_TYPE <- typ$intCAR_TYPE[match(insc$CAR_TYPE, typ$CAR_TYPE)]
 
-print("Summary for insc")
 summary(insc) #Show the new attributes and corrections
+
 
 
 #IMPUTE missing values
 
+#Amelia PACKAGE:
 #first we must make a dataframe with numeric-only fields
-insi <- subset(insc,select = c("INDEX", "TARGET_FLAG", "TARGET_AMT", "KIDSDRIV", "AGE", "HOMEKIDS", "YOJ", "INCOME", "HOME_VAL", "TRAVTIME", "BLUEBOOK", "TIF", "OLDCLAIM", "CLM_FREQ", "MVR_PTS", "CAR_AGE", "blnPARENT1", "blnMSTATUS", "blnSEX", "blnCAR_USE", "blnNOT_RED_CAR", "blnNOT_REVOKED", "blnURBANICITY", "intEDUCATION", "intJOB", "intCAR_TYPE"))
-
-print("Summary for insi")
-summary(insi)
-
-
-#use the Amelia II package to create the imputations
-a.ins <- amelia(insi, m = 1, ts = "INDEX", cs = "TARGET_AMT")
+#insi <- subset(insc,select = c("INDEX", "TARGET_FLAG", "TARGET_AMT", "KIDSDRIV", "AGE", "HOMEKIDS", "YOJ", "INCOME", "HOME_VAL", "TRAVTIME", "BLUEBOOK", "TIF", "OLDCLAIM", "CLM_FREQ", "MVR_PTS", "CAR_AGE", "blnPARENT1", "blnMSTATUS", "blnSEX", "blnCAR_USE", "blnNOT_RED_CAR", "blnNOT_REVOKED", "blnURBANICITY", "intEDUCATION", "intJOB", "intCAR_TYPE"))
+#summary(insi)
+#a.ins <- amelia(insi, m = 1, ts = "INDEX", cs = "TARGET_AMT")
 #a.ins$imputations$imp1
-a.i <- a.ins$imputations$imp1 
+#a.i <- a.ins$imputations$imp1 
+#head(a.i)
+#summary(a.i)
+#turns out, can't use the Amelia II package to create the imputations because it can't handle non-normal distributions
 
-head(a.i)
+# MI PACKAGE
+#mi.i <- mi(insc, seed = 335)
+#summary(mi.i)
+#head(mi.i)
+#mi.i
+#conclusion: i dont understand the output of the mi package
 
-summary(a.i)
+# Hmisc PACKAGE
+#we must declare which variables have missing values
+#hmisc.i <- aregImpute(formula = ~ AGE + YOJ + HOME_VAL + JOB + INCOME + CAR_AGE, data = insc, n.impute = 5)
+#hmisc.i
+#note the R-squares are very low (poor) for Age, Years on Job, Home Valuation and Car Age.
+#hmisc.i$imputed$AGE #look at imputed values for one variable
+#conclusion: good values, but how to copy the imputed values back to the original dataframe?  transcan?  google says use MICE instead
+
+#mice PACKAGE
+#uses Predictive Mean Matching. 
+mice.i <- mice(insc, m = 3, print=F)
+mice.ic <- complete(mice.i,1)
+head(mice.ic)
+summary(mice.ic)  #  <---- USE mice.ic DATA FRAME for modeling with imputed data  ***
+#conclusion: the imputed values are above zero.  wish I could see methods, R-Squares 
+
+
+
+
+
 
 ```
+
+
 
 
 Below is a summary of each predictor variable's basic statistics, followed by boxplots which illustrate the spread and outliers for each variable.    
 
 
-```{r,echo=FALSE,warning=FALSE,eval=FALSE}
+```{r,echo=FALSE,warning=FALSE}
 # First, remove the INDEX variable column since it's not used
-ins <- ins[2:length(ins)]
+mice.ic <- mice.ic[2:length(mice.ic)]
 # Next, get a general look at the data
 # Let's start by exploring the type of each variable
-types <- sapply(1:length(ins),function(x) typeof(ins[,x]))
-types.df <- data.frame(VAR=names(ins),TYPE=types)
-#kable(types.df)
+types <- sapply(1:length(mice.ic),function(x) typeof(mice.ic[,x]))
+types.df <- data.frame(VAR=names(mice.ic),TYPE=types)
+kable(types.df)
+
 # Now generate some summary statistics
-kable(summary(ins[1:6]))
-kable(summary(ins[7:12]))
-kable(summary(ins[13:18]))
-kable(summary(ins[19:length(ins)]))
+kable(summary(mice.ic[1:6]))
+kable(summary(mice.ic[7:12]))
+kable(summary(mice.ic[13:18]))
+kable(summary(mice.ic[19:24]))
+kable(summary(mice.ic[25:30]))
+kable(summary(mice.ic[31:length(mice.ic)]))
 # Visual check for obvious correlations
-#pairs(crime,col=crime$target)
+#pairs(mice.ic,col=mice.ic$TARGET_FLAG)
 #
 # no NAs found so no missing values to remove or fix
 #
-# Look over the variables checking for outliers/influencial points, correlation between variables, etc. using box plots.
+# Look over the variables checking for outliers/influential points, correlation between variables, etc. using box plots.
 #
 # set the plot-page configuration
 
@@ -192,119 +223,114 @@ kable(summary(ins[19:length(ins)]))
 
 ```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
 par(mfcol=c(1,3))
-boxplot(crime$zn, main="zn")
-boxplot(crime$indus, main="indus")
-boxplot(crime$nox, main="nox")
+boxplot(mice.ic$KIDSDRIV, main="KIDSDRIV")
+boxplot(mice.ic$AGE, main="AGE")
+boxplot(mice.ic$HOMEKIDS, main="HOMEKIDS")
 ```
 
 ```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
 par(mfcol=c(1,3))
-boxplot(crime$rm, main="rm")
-boxplot(crime$age, main="age")
-boxplot(crime$dis, main="dis")
+boxplot(mice.ic$YOJ, main="YOJ")
+boxplot(mice.ic$HOME_VAL, main="HOME_VAL")
+boxplot(mice.ic$intEDUCATION, main="EDUCATION")
 ```
 
 ```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
 par(mfcol=c(1,3))
-
-boxplot(crime$rad, main="rad")
-boxplot(crime$tax, main="tax")
-boxplot(crime$ptratio, main="ptratio")
+boxplot(mice.ic$intJOB, main="JOB")
+boxplot(mice.ic$INCOME, main="INCOME")
+boxplot(mice.ic$TRAVTIME, main="TRAVTIME")
 ```
 
 ```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
 par(mfcol=c(1,3))
-boxplot(crime$black, main="black")
-boxplot(crime$lstat, main="lstat")
-boxplot(crime$medv, main="mdev")
+boxplot(mice.ic$TIF, main="TIF")
+boxplot(mice.ic$intCAR_TYPE, main="CAR_TYPE")
+boxplot(mice.ic$BLUEBOOK, main="BLUEBOOK")
 ```
+
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+par(mfcol=c(1,3))
+boxplot(mice.ic$OLDCLAIM, main="OLDCLAIM")
+boxplot(mice.ic$CLM_FREQ, main="CLM_FREQ")
+boxplot(mice.ic$MVR_PTS, main="MVR_PTS")
+```
+
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+par(mfcol=c(1,3))
+boxplot(mice.ic$CAR_AGE, main="CAR_AGE")
+```
+
+
+
 
 
 Based on an analysis of the box plots, the following variables have some outliers that may, or may not, exert influence on the regression results: 
-    - zn, rm, dis, black, lstat, medv  
+    - KIDSDRIV, HOME_VAL, TRAVTIME, MVR_PTS  
   
 We'll next look at these variables more closely, starting with their histograms and frequency counts to better understand the nature of their distribution.  
 
 ```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
-# zn
-m <- mean(crime$zn)
-s <- sd(crime$zn)
+# KIDSDRIV
+m <- mean(mice.ic$KIDSDRIV)
+s <- sd(mice.ic$KIDSDRIV)
 par(mfcol=c(1,3))
-hist(crime$zn,prob=TRUE,xlab="ZN",main='')
+hist(mice.ic$KIDSDRIV,prob=TRUE,xlab="KIDSDRIV",main='')
 curve(dnorm(x,mean=m,sd=s),col="darkblue",lwd=2,add=TRUE)
 # zn is so skewed, let's look at a frequency count
-plot(table(crime$zn))
+plot(table(mice.ic$KIDSDRIV))
 # let's look at a plot of the values
-plot(crime$zn)
+plot(mice.ic$KIDSDRIV)
 
 ```  
 
 ```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
-# rm
-m <- mean(crime$rm)
-s <- sd(crime$rm)
+# HOME_VAL
+m <- mean(mice.ic$HOME_VAL)
+s <- sd(mice.ic$HOME_VAL)
 par(mfcol=c(1,3))
-hist(crime$rm,prob=TRUE,xlab="RM",main='')
+hist(mice.ic$HOME_VAL,prob=TRUE,xlab="HOME_VAL",main='')
 curve(dnorm(x,mean=m,sd=s),col="darkblue",lwd=2,add=TRUE)
 #let's look at a frequency count
-plot(table(crime$rm))
+plot(table(mice.ic$HOME_VAL))
 # let's look at a plot of the values
-plot(crime$rm)
+plot(mice.ic$HOME_VAL)
 ```  
 
 ```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
-# dis
-m <- mean(crime$dis)
-s <- sd(crime$dis)
+# MVR_PTS
+m <- mean(mice.ic$MVR_PTS)
+s <- sd(mice.ic$MVR_PTS)
 par(mfcol=c(1,3))
-hist(crime$dis,prob=TRUE,xlab="DIS",main='')
+hist(mice.ic$MVR_PTS,prob=TRUE,xlab="DIS",main='')
 curve(dnorm(x,mean=m,sd=s),col="darkblue",lwd=2,add=TRUE)
 #let's look at a frequency count
-plot(table(crime$dis))
+plot(table(mice.ic$MVR_PTS))
 # let's look at a plot of the values
-plot(crime$dis)
+plot(mice.ic$MVR_PTS)
 ```  
 
 ```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
-# black
-m <- mean(crime$black)
-s <- sd(crime$black)
+# TRAVTIME
+m <- mean(mice.ic$TRAVTIME)
+s <- sd(mice.ic$TRAVTIME)
 par(mfcol=c(1,3))
-hist(crime$black,prob=TRUE,xlab="BLACK",main='')
+hist(mice.ic$TRAVTIME,prob=TRUE,xlab="BLACK",main='')
 curve(dnorm(x,mean=m,sd=s),col="darkblue",lwd=2,add=TRUE)
 # black is so skewed, let's look at a frequency count
-plot(table(crime$black))
+plot(table(mice.ic$TRAVTIME))
 # let's look at a plot of the values
-plot(crime$black)
+plot(mice.ic$TRAVTIME)
 ```  
 
-```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
-# lstat
-m <- mean(crime$lstat)
-s <- sd(crime$lstat)
-par(mfcol=c(1,3))
-hist(crime$lstat,prob=TRUE,xlab="LSTAT",main='')
-curve(dnorm(x,mean=m,sd=s),col="darkblue",lwd=2,add=TRUE)
-
-#let's look at a frequency count
-plot(table(crime$lstat))
-# let's look at a plot of the values
-plot(crime$lstat)
 ```  
 
-```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
-# medv
-m <- mean(crime$medv)
-s <- sd(crime$medv)
-par(mfcol=c(1,3))
-hist(crime$medv,prob=TRUE,xlab="MEDV",main='')
-curve(dnorm(x,mean=m,sd=s),col="darkblue",lwd=2,add=TRUE)
 
-#let's look at a frequency count
-plot(table(crime$medv))
-# let's look at a plot of the values
-plot(crime$medv)
-```  
+
+
+
+
+
 
 ```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
 
