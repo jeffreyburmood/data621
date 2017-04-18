@@ -35,7 +35,7 @@ Approach Steps:
 ##Data Exploration
 
 
-```{r,include=FALSE,warning=FALSE}
+```{r,warning=FALSE}
 # Load required libraries
 library(ggplot2)
 library(ROCR)
@@ -223,42 +223,42 @@ kable(summary(insi[25:length(insi)]))
 
 ```
 
-```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3}
 par(mfcol=c(1,3))
 boxplot(insi$KIDSDRIV, main="KIDSDRIV")
 boxplot(insi$AGE, main="AGE")
 boxplot(insi$HOMEKIDS, main="HOMEKIDS")
 ```
 
-```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3}
 par(mfcol=c(1,3))
 boxplot(insi$YOJ, main="YOJ")
 boxplot(insi$HOME_VAL, main="HOME_VAL")
 boxplot(insi$intEDUCATION, main="EDUCATION")
 ```
 
-```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3}
 par(mfcol=c(1,3))
 boxplot(insi$intJOB, main="JOB")
 boxplot(insi$INCOME, main="INCOME")
 boxplot(insi$TRAVTIME, main="TRAVTIME")
 ```
 
-```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3}
 par(mfcol=c(1,3))
 boxplot(insi$TIF, main="TIF")
 boxplot(insi$intCAR_TYPE, main="CAR_TYPE")
 boxplot(insi$BLUEBOOK, main="BLUEBOOK")
 ```
 
-```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3}
 par(mfcol=c(1,3))
 boxplot(insi$OLDCLAIM, main="OLDCLAIM")
 boxplot(insi$CLM_FREQ, main="CLM_FREQ")
 boxplot(insi$MVR_PTS, main="MVR_PTS")
 ```
 
-```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3}
 par(mfcol=c(1,3))
 boxplot(insi$CAR_AGE, main="CAR_AGE")
 ```
@@ -272,7 +272,7 @@ Based on an analysis of the box plots, the following variables have some outlier
   
 We'll next look at these variables more closely, starting with their histograms and frequency counts to better understand the nature of their distribution.  
 
-```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3}
 # KIDSDRIV
 m <- mean(insi$KIDSDRIV)
 s <- sd(insi$KIDSDRIV)
@@ -286,7 +286,7 @@ plot(insi$KIDSDRIV)
 
 ```  
 
-```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3}
 # HOME_VAL
 m <- mean(insi$HOME_VAL)
 s <- sd(insi$HOME_VAL)
@@ -299,7 +299,7 @@ plot(table(insi$HOME_VAL))
 plot(insi$HOME_VAL)
 ```  
 
-```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3}
 # MVR_PTS
 m <- mean(insi$MVR_PTS)
 s <- sd(insi$MVR_PTS)
@@ -312,7 +312,7 @@ plot(table(insi$MVR_PTS))
 plot(insi$MVR_PTS)
 ```  
 
-```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3}
 # TRAVTIME
 m <- mean(insi$TRAVTIME)
 s <- sd(insi$TRAVTIME)
