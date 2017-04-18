@@ -177,8 +177,11 @@ summary(insc) #Show the new attributes and corrections
 #uses Predictive Mean Matching. 
 mice.i <- mice(insc, m = 3, print=F)
 mice.ic <- complete(mice.i,1)
-head(mice.ic)
-summary(mice.ic)  #  <---- USE mice.ic DATA FRAME for modeling with imputed data  ***
+
+insi <- subset(mice.ic,select = c("INDEX", "TARGET_FLAG", "TARGET_AMT", "KIDSDRIV", "AGE", "HOMEKIDS", "YOJ", "INCOME", "HOME_VAL", "TRAVTIME", "BLUEBOOK", "TIF", "OLDCLAIM", "CLM_FREQ", "MVR_PTS", "CAR_AGE", "blnPARENT1", "blnMSTATUS", "blnSEX", "blnCAR_USE", "blnNOT_RED_CAR", "blnNOT_REVOKED", "blnURBANICITY", "intEDUCATION", "intJOB", "intCAR_TYPE"))
+
+head(insi)
+summary(insi)  #  <---- USE insi DATA FRAME for modeling with imputed data  ***
 #conclusion: the imputed values are above zero.  wish I could see methods, R-Squares 
 
 #now we must make a dataframe with numeric-only fields
@@ -209,7 +212,6 @@ kable(summary(insi[1:6]))
 kable(summary(insi[7:12]))
 kable(summary(insi[13:18]))
 kable(summary(insi[19:length(insi)]))
-
 
 # Visual check for obvious correlations
 #pairs(insi,col=insi$TARGET_FLAG)
