@@ -177,8 +177,11 @@ summary(insc) #Show the new attributes and corrections
 #uses Predictive Mean Matching. 
 mice.i <- mice(insc, m = 3, print=F)
 mice.ic <- complete(mice.i,1)
-head(mice.ic)
-summary(mice.ic)  #  <---- USE mice.ic DATA FRAME for modeling with imputed data  ***
+
+insi <- subset(mice.ic,select = c("INDEX", "TARGET_FLAG", "TARGET_AMT", "KIDSDRIV", "AGE", "HOMEKIDS", "YOJ", "INCOME", "HOME_VAL", "TRAVTIME", "BLUEBOOK", "TIF", "OLDCLAIM", "CLM_FREQ", "MVR_PTS", "CAR_AGE", "blnPARENT1", "blnMSTATUS", "blnSEX", "blnCAR_USE", "blnNOT_RED_CAR", "blnNOT_REVOKED", "blnURBANICITY", "intEDUCATION", "intJOB", "intCAR_TYPE"))
+
+head(insi)
+summary(insi)  #  <---- USE insi DATA FRAME for modeling with imputed data  ***
 #conclusion: the imputed values are above zero.  wish I could see methods, R-Squares 
 
 
@@ -196,22 +199,21 @@ Below is a summary of each predictor variable's basic statistics, followed by bo
 
 ```{r,echo=FALSE,warning=FALSE}
 # First, remove the INDEX variable column since it's not used
-mice.ic <- mice.ic[2:length(mice.ic)]
+insi <- insi[2:length(insi)]
 # Next, get a general look at the data
 # Let's start by exploring the type of each variable
-types <- sapply(1:length(mice.ic),function(x) typeof(mice.ic[,x]))
-types.df <- data.frame(VAR=names(mice.ic),TYPE=types)
+types <- sapply(1:length(insi),function(x) typeof(insi[,x]))
+types.df <- data.frame(VAR=names(insi),TYPE=types)
 kable(types.df)
 
 # Now generate some summary statistics
-kable(summary(mice.ic[1:6]))
-kable(summary(mice.ic[7:12]))
-kable(summary(mice.ic[13:18]))
-kable(summary(mice.ic[19:24]))
-kable(summary(mice.ic[25:30]))
-kable(summary(mice.ic[31:length(mice.ic)]))
+kable(summary(insi[1:6]))
+kable(summary(insi[7:12]))
+kable(summary(insi[13:18]))
+kable(summary(insi[19:24]))
+kable(summary(insi[25:length(insi)]))
 # Visual check for obvious correlations
-#pairs(mice.ic,col=mice.ic$TARGET_FLAG)
+#pairs(insi,col=insi$TARGET_FLAG)
 #
 # no NAs found so no missing values to remove or fix
 #
@@ -223,42 +225,42 @@ kable(summary(mice.ic[31:length(mice.ic)]))
 
 ```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
 par(mfcol=c(1,3))
-boxplot(mice.ic$KIDSDRIV, main="KIDSDRIV")
-boxplot(mice.ic$AGE, main="AGE")
-boxplot(mice.ic$HOMEKIDS, main="HOMEKIDS")
+boxplot(insi$KIDSDRIV, main="KIDSDRIV")
+boxplot(insi$AGE, main="AGE")
+boxplot(insi$HOMEKIDS, main="HOMEKIDS")
 ```
 
 ```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
 par(mfcol=c(1,3))
-boxplot(mice.ic$YOJ, main="YOJ")
-boxplot(mice.ic$HOME_VAL, main="HOME_VAL")
-boxplot(mice.ic$intEDUCATION, main="EDUCATION")
+boxplot(insi$YOJ, main="YOJ")
+boxplot(insi$HOME_VAL, main="HOME_VAL")
+boxplot(insi$intEDUCATION, main="EDUCATION")
 ```
 
 ```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
 par(mfcol=c(1,3))
-boxplot(mice.ic$intJOB, main="JOB")
-boxplot(mice.ic$INCOME, main="INCOME")
-boxplot(mice.ic$TRAVTIME, main="TRAVTIME")
+boxplot(insi$intJOB, main="JOB")
+boxplot(insi$INCOME, main="INCOME")
+boxplot(insi$TRAVTIME, main="TRAVTIME")
 ```
 
 ```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
 par(mfcol=c(1,3))
-boxplot(mice.ic$TIF, main="TIF")
-boxplot(mice.ic$intCAR_TYPE, main="CAR_TYPE")
-boxplot(mice.ic$BLUEBOOK, main="BLUEBOOK")
+boxplot(insi$TIF, main="TIF")
+boxplot(insi$intCAR_TYPE, main="CAR_TYPE")
+boxplot(insi$BLUEBOOK, main="BLUEBOOK")
 ```
 
 ```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
 par(mfcol=c(1,3))
-boxplot(mice.ic$OLDCLAIM, main="OLDCLAIM")
-boxplot(mice.ic$CLM_FREQ, main="CLM_FREQ")
-boxplot(mice.ic$MVR_PTS, main="MVR_PTS")
+boxplot(insi$OLDCLAIM, main="OLDCLAIM")
+boxplot(insi$CLM_FREQ, main="CLM_FREQ")
+boxplot(insi$MVR_PTS, main="MVR_PTS")
 ```
 
 ```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
 par(mfcol=c(1,3))
-boxplot(mice.ic$CAR_AGE, main="CAR_AGE")
+boxplot(insi$CAR_AGE, main="CAR_AGE")
 ```
 
 
@@ -272,55 +274,55 @@ We'll next look at these variables more closely, starting with their histograms 
 
 ```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
 # KIDSDRIV
-m <- mean(mice.ic$KIDSDRIV)
-s <- sd(mice.ic$KIDSDRIV)
+m <- mean(insi$KIDSDRIV)
+s <- sd(insi$KIDSDRIV)
 par(mfcol=c(1,3))
-hist(mice.ic$KIDSDRIV,prob=TRUE,xlab="KIDSDRIV",main='')
+hist(insi$KIDSDRIV,prob=TRUE,xlab="KIDSDRIV",main='')
 curve(dnorm(x,mean=m,sd=s),col="darkblue",lwd=2,add=TRUE)
 # zn is so skewed, let's look at a frequency count
-plot(table(mice.ic$KIDSDRIV))
+plot(table(insi$KIDSDRIV))
 # let's look at a plot of the values
-plot(mice.ic$KIDSDRIV)
+plot(insi$KIDSDRIV)
 
 ```  
 
 ```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
 # HOME_VAL
-m <- mean(mice.ic$HOME_VAL)
-s <- sd(mice.ic$HOME_VAL)
+m <- mean(insi$HOME_VAL)
+s <- sd(insi$HOME_VAL)
 par(mfcol=c(1,3))
-hist(mice.ic$HOME_VAL,prob=TRUE,xlab="HOME_VAL",main='')
+hist(insi$HOME_VAL,prob=TRUE,xlab="HOME_VAL",main='')
 curve(dnorm(x,mean=m,sd=s),col="darkblue",lwd=2,add=TRUE)
 #let's look at a frequency count
-plot(table(mice.ic$HOME_VAL))
+plot(table(insi$HOME_VAL))
 # let's look at a plot of the values
-plot(mice.ic$HOME_VAL)
+plot(insi$HOME_VAL)
 ```  
 
 ```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
 # MVR_PTS
-m <- mean(mice.ic$MVR_PTS)
-s <- sd(mice.ic$MVR_PTS)
+m <- mean(insi$MVR_PTS)
+s <- sd(insi$MVR_PTS)
 par(mfcol=c(1,3))
-hist(mice.ic$MVR_PTS,prob=TRUE,xlab="DIS",main='')
+hist(insi$MVR_PTS,prob=TRUE,xlab="DIS",main='')
 curve(dnorm(x,mean=m,sd=s),col="darkblue",lwd=2,add=TRUE)
 #let's look at a frequency count
-plot(table(mice.ic$MVR_PTS))
+plot(table(insi$MVR_PTS))
 # let's look at a plot of the values
-plot(mice.ic$MVR_PTS)
+plot(insi$MVR_PTS)
 ```  
 
 ```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
 # TRAVTIME
-m <- mean(mice.ic$TRAVTIME)
-s <- sd(mice.ic$TRAVTIME)
+m <- mean(insi$TRAVTIME)
+s <- sd(insi$TRAVTIME)
 par(mfcol=c(1,3))
-hist(mice.ic$TRAVTIME,prob=TRUE,xlab="BLACK",main='')
+hist(insi$TRAVTIME,prob=TRUE,xlab="BLACK",main='')
 curve(dnorm(x,mean=m,sd=s),col="darkblue",lwd=2,add=TRUE)
 # black is so skewed, let's look at a frequency count
-plot(table(mice.ic$TRAVTIME))
+plot(table(insi$TRAVTIME))
 # let's look at a plot of the values
-plot(mice.ic$TRAVTIME)
+plot(insi$TRAVTIME)
 ```  
 
 ```  
