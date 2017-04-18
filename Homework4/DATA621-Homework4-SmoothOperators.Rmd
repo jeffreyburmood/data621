@@ -35,7 +35,7 @@ Approach Steps:
 ##Data Exploration
 
 
-```{r,include=FALSE,warning=FALSE}
+```{r,warning=FALSE}
 # Load required libraries
 library(ggplot2)
 library(ROCR)
@@ -221,42 +221,42 @@ kable(summary(mice.ic[31:length(mice.ic)]))
 
 ```
 
-```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3}
 par(mfcol=c(1,3))
 boxplot(mice.ic$KIDSDRIV, main="KIDSDRIV")
 boxplot(mice.ic$AGE, main="AGE")
 boxplot(mice.ic$HOMEKIDS, main="HOMEKIDS")
 ```
 
-```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3}
 par(mfcol=c(1,3))
 boxplot(mice.ic$YOJ, main="YOJ")
 boxplot(mice.ic$HOME_VAL, main="HOME_VAL")
 boxplot(mice.ic$intEDUCATION, main="EDUCATION")
 ```
 
-```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3}
 par(mfcol=c(1,3))
 boxplot(mice.ic$intJOB, main="JOB")
 boxplot(mice.ic$INCOME, main="INCOME")
 boxplot(mice.ic$TRAVTIME, main="TRAVTIME")
 ```
 
-```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3}
 par(mfcol=c(1,3))
 boxplot(mice.ic$TIF, main="TIF")
 boxplot(mice.ic$intCAR_TYPE, main="CAR_TYPE")
 boxplot(mice.ic$BLUEBOOK, main="BLUEBOOK")
 ```
 
-```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3}
 par(mfcol=c(1,3))
 boxplot(mice.ic$OLDCLAIM, main="OLDCLAIM")
 boxplot(mice.ic$CLM_FREQ, main="CLM_FREQ")
 boxplot(mice.ic$MVR_PTS, main="MVR_PTS")
 ```
 
-```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3}
 par(mfcol=c(1,3))
 boxplot(mice.ic$CAR_AGE, main="CAR_AGE")
 ```
@@ -270,7 +270,7 @@ Based on an analysis of the box plots, the following variables have some outlier
   
 We'll next look at these variables more closely, starting with their histograms and frequency counts to better understand the nature of their distribution.  
 
-```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3}
 # KIDSDRIV
 m <- mean(mice.ic$KIDSDRIV)
 s <- sd(mice.ic$KIDSDRIV)
@@ -284,7 +284,7 @@ plot(mice.ic$KIDSDRIV)
 
 ```  
 
-```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3}
 # HOME_VAL
 m <- mean(mice.ic$HOME_VAL)
 s <- sd(mice.ic$HOME_VAL)
@@ -297,7 +297,7 @@ plot(table(mice.ic$HOME_VAL))
 plot(mice.ic$HOME_VAL)
 ```  
 
-```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3}
 # MVR_PTS
 m <- mean(mice.ic$MVR_PTS)
 s <- sd(mice.ic$MVR_PTS)
@@ -310,7 +310,7 @@ plot(table(mice.ic$MVR_PTS))
 plot(mice.ic$MVR_PTS)
 ```  
 
-```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3}
 # TRAVTIME
 m <- mean(mice.ic$TRAVTIME)
 s <- sd(mice.ic$TRAVTIME)
