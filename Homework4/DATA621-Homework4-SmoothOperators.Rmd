@@ -487,26 +487,8 @@ plot(fitted(log_model_wls), rstandard(log_model_wls))
 
 
 ```{r,echo=FALSE,eval=FALSE}
-#Creation of lists 
-var <- c()
-p_val <- c()
-aic <- c()
-auc <- c()
-
-#For loop to run variables over univarate glms
-for(i in models){
-  var <- c(var,variable.names(i)[2])
-  aic <- c(aic,i$aic)
-  p_val <- c(p_val,summary(i)$coef[2, "Pr(>|z|)"])
-  p <- predict(i, newdata=subset(test,select=c(1,2,3,4,5,6,7,8,9,10,11,12,13)), type="response")
-  pr <- prediction(p, test$target)
-  prf <- performance(pr, measure = "tpr", x.measure = "fpr")
-  auc_perf<- performance(pr, measure = "auc")
-  auc_val <- auc_perf@y.values[[1]]
-  auc <- c(auc,auc_val)
-}
-
-kable(data.frame(var,p_val,aic,auc))
+backward <- step(log_model_wls)
+summary(backward)
 ```
 
 Here we see the selected output criteria for the linear models run with only a single predictor variable. We examine the p-value (significance), the AIC statistic (goodness-of-fit) and the AUC (Area Under Curve) to measure the potential predictive value of each variable, so we can decide whether or not to include it in our multiple regression model.  We are looking for p-values below .05, AIC values as low as possible, and AUC values as high as possible.
