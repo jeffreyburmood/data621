@@ -30,7 +30,7 @@ Approach Steps:
 {\huge Data Exploration}
 \end{center}
 
---------
+---
 
 ##Data Exploration
 
@@ -48,7 +48,8 @@ library(stringr)
 ##library(Hmisc)
 ##library(mi)
 library(mice)
-
+library(dplyr)
+library(reshape2)
 #
 # Read in the dataset from github
 ins <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/master/Homework4/data/insurance_training_data.csv"),header=TRUE,na.strings=c(""," "), stringsAsFactors = FALSE)
@@ -326,14 +327,22 @@ plot(table(insi$TRAVTIME))
 plot(insi$TRAVTIME)
 ```  
 
-```  
+The last step in the data exploration is to examine the correlation tables, to see if there is any potential correlations that will impact our models. The below table shows the a condense correlation table showing only the highest positive and negative correlations (in this case above 0.5 and below -.5)
 
+  
+```{r,echo=FALSE,warning=FALSE,eval=FALSE}
 
+# build a correlation table to study the variable relationships
+cor.table <- cor(insi) # build a table of inter-variable correlation values
+cor.table <- melt(cor.table)
+cor.table <- subset(cor.table, value != 1)
+cor.table <- subset(cor.table, value >= .5 | value <= -.5)
+cor.table <- distinct(cor.table,value, .keep_all =  TRUE)
+colnames<-c("Var 1","Var 2", "Correlations")
 
-
-
-
-
+kable(cor.table)
+```
+As you can see, certain variables are correlated, and they are values that we would expect to be correlated. We expect there to be a correlation between income and jobs/home value and educations, as these are well established indicators of success. Higher educated people are more likely to secure higher paying jobs, which we can see in the higher correlations for these values. Furthermore, car type is going to be a clear indicator of the value of the car. Sports cars and suvs cost more than compacts. An interestiong but also intuitive correlations exists bewteen gender and car type and car color.  
 
 ```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
 
@@ -343,23 +352,7 @@ crime.model <- glm(target ~ .,family=binomial(link='logit'),data=crime)
 
 ```
   
-According to the description, the variables *zn*, *indus*, and *age* are area, or land, proportions. According to the statistical summary, the values for these variables are all within the range [1,100] that we would expect.  
-  
-Based on our detailed review of the variables that contained outliers, the following variables could be problematic:  
-  
-The predictor variable *zn* is highly right skewed, we can confirm this by comparing the median and mean where the median is 0.0, but the mean is 11.58. The frequency count plot shows how poor the distribution is due to clustering of the data at one extreme.  
-  
-The predictor variable *black* is highly left skewed. We can confirm this by comparing the median and mean where the median is 391.34 and the mean is 357.12. The frequency count plot shows how poor the distribution is due to clustering of the data at one extreme.  
-  
-The predictor variable *dis* is slightly right skewed. We can confirm this by comparing the median and mean where the median is 3.191 and the mean is 3.796.  
-  
-Fortunately, no missing data, or NAs, were found.  
-  
-The following data corrections were identified in this section:  
-  
-(1) The predictor variable *chas* and the response variable *target* are categorical (binary), so we need to convert them to factors.  
-  
-(2) Need to determine if there are other variables highly coorelated with the *zn* or *black* variables that do not have the severe skew and outliers. This could allow us to remove the *zn* or *black* variables from the model.  
+
 
 
 \begin{center}
@@ -371,25 +364,65 @@ The following data corrections were identified in this section:
 ##Data Preparation
 
 
-The variable changes we identified so far include converting the predictor variable *chas* and the response variable *target* to factors.  Next we will look at how each variable correlates to all the others:  
+```{r}
+train <- subset(insi, TARGET_FLAG ==1)
 
-  
-```{r,echo=FALSE,warning=FALSE,eval=FALSE}
-# Based on the data exploration results, identify any changes, transformations, and new or deleted variables to use for the next step of building the models.
-# Need to set variables to a factor as required
-crime$target <- as.factor(crime$target)
-crime$chas <- as.factor(crime$chas)
-crime_eval$chas <- as.factor(crime_eval$chas)
+# quick look at model with all variables
+KIDSDRIV_lm <- lm(TARGET_AMT ~ KIDSDRIV,data=train)
+AGE_lm <- lm(TARGET_AMT ~ AGE,data=train)
+HOMEKIDS_lm <- lm(TARGET_AMT ~ HOMEKIDS,data=train)
+YOJ_lm <- lm(TARGET_AMT ~ YOJ,data=train)
+INCOME_lm <- lm(TARGET_AMT ~ INCOME,data=train)
+TRAVTIME_lm <- lm(TARGET_AMT ~ TRAVTIME,data=train)
+BLUEBOOK_lm <- lm(TARGET_AMT ~ BLUEBOOK,data=train)
+TIF_lm <- lm(TARGET_AMT ~ TIF,data=train)
+OLDCLAIM_lm <- lm(TARGET_AMT ~ OLDCLAIM,data=train)
+CLM_FREQ_lm <- lm(TARGET_AMT ~ CLM_FREQ,data=train)
+MVR_PTS_lm <- lm(TARGET_AMT ~ MVR_PTS,data=train)
+CAR_AGE_lm <- lm(TARGET_AMT ~ CAR_AGE,data=train)
+blnPARENT1_lm <- lm(TARGET_AMT ~ blnPARENT1,data=train)
+blnMSTATUS_lm <- lm(TARGET_AMT ~ blnMSTATUS,data=train)
+blnSEX_lm <- lm(TARGET_AMT ~ blnSEX,data=train)
+blnCAR_USE_lm <- lm(TARGET_AMT ~ blnCAR_USE,data=train)
+blnNOT_RED_CAR_lm <- lm(TARGET_AMT ~ blnNOT_RED_CAR,data=train)
+blnNOT_REVOKED_lm <- lm(TARGET_AMT ~ blnNOT_REVOKED,data=train)
+blnURBANICITY_lm <- lm(TARGET_AMT ~ blnURBANICITY,data=train)
+intEDUCATION_lm <- lm(TARGET_AMT ~ intEDUCATION,data=train)
+intJOB_lm <- lm(TARGET_AMT ~ intJOB,data=train)
+intCAR_TYPE_lm <- lm(TARGET_AMT ~ intCAR_TYPE,data=train)
 
-# get a table of non-factor variables
-crime.nofactor <- subset(crime,select=-c(chas,target))
-# build a correlation table to study the variable relationships
-cor.table <- cor(crime.nofactor) # build a table of inter-variable correlation values
-kable(cor.table[,1:6])
-kable(cor.table[,7:12])
+models <- list(KIDSDRIV_lm, AGE_lm,HOMEKIDS_lm,YOJ_lm,INCOME_lm,
+              TRAVTIME_lm,BLUEBOOK_lm,TIF_lm,OLDCLAIM_lm,CLM_FREQ_lm,
+              MVR_PTS_lm,CAR_AGE_lm,blnPARENT1_lm,blnMSTATUS_lm,
+              blnSEX_lm,blnCAR_USE_lm,blnNOT_RED_CAR_lm,blnNOT_REVOKED_lm,
+              blnURBANICITY_lm,intEDUCATION_lm,intJOB_lm,intCAR_TYPE_lm)
+
+summary(BLUEBOOK_lm)
+plot(BLUEBOOK_lm)
+plot(train$BLUEBOOK,train$TARGET_AMT)
+abline(BLUEBOOK_lm)
 ```
-  
-The correlation table above shows that the variable *zn* is moderately correlated to the variable *dis*. The plot of the *dis* data shows a much better distribution of values. Consequently, one possibility is to remove *zn* from the model and use *dis* instead.  Before doing this, we should look at the real-world context of the two variables to determine if they are meaningfully related.
+
+```{r}
+summary(INCOME_lm)$adj.r.squared
+variable.names(INCOME_lm)[2]
+```
+```{r,echo=FALSE,eval=FALSE}
+#Creation of lists 
+var <- c()
+p_val <- c()
+r2_val <- c()
+
+#For loop to run variables over univarate glms
+for(i in models){
+  var <- c(var,variable.names(i)[2])
+  p_val <- c(p_val,summary(i)$coef[2, "Pr(>|t|)"])
+  r2_val <- c(r2_val,summary(i)$adj.r.squared)
+}
+
+data.frame(var,p_val,r2_val)
+```
+
 
 
 \begin{center}
@@ -400,65 +433,62 @@ The correlation table above shows that the variable *zn* is moderately correlate
 
 ##Build Models
 
-One method of developing multiple regression models is to take a stepwise approach.  To accomplish this, we combine our knowledge from the data exploration above with logistic regression. Univariate Logistic Regression is a useful method to understand how each predictor variable interacts individually with the target (response) variable. Looking at various statistics, we determine which variable may impact our target the most.
-
 ```{r,echo=FALSE,warning=FALSE,eval=FALSE}
-## 80% of the sample size
-set.seed(121)
-smp_size <- floor(0.80 * nrow(crime))
+lin_model <- subset(insi, TARGET_FLAG == 1)
+Var_lm <- c("TARGET_AMT","TARGET_FLAG","INCOME","TRAVTIME","BLUEBOOK","OLDCLAIM", "YOJ","intEDUCATION","intJOB","CAR_AGE")
 
-## set the seed to make your partition reproductible
-train_ind <- sample(seq_len(nrow(crime)), size = smp_size)
+log_var <- c("TARGET_AMT","INCOME","BLUEBOOK","OLDCLAIM")
 
-train <- crime[train_ind, ]
-test <- crime[-train_ind, ]
+log_lin_model <- lin_model[Var_lm]
+log_lin_model[log_var] <- log(log_lin_model[log_var])
+log_lin_model <- do.call(data.frame,lapply(log_lin_model, function(x) replace(x, is.infinite(x),0)))
+```
 
-# quick look at model with all variables
+```{r,echo=FALSE,eval=FALSE}
+log_model_ols <- lm(TARGET_AMT ~ INCOME + TRAVTIME + BLUEBOOK+
+                      OLDCLAIM + YOJ + intEDUCATION + intJOB + CAR_AGE, 
+                    data =log_lin_model)
+summary(log_model_ols)
 
-zn_uni_model<- glm(target ~ zn,family=binomial(link='logit'),data=train)           
-indus_uni_model<- glm(target ~ indus,family=binomial(link='logit'),data=train)       
-chas_uni_model<- glm(target ~ chas,family=binomial(link='logit'),data=train)        
-nox_uni_model<- glm(target ~ nox,family=binomial(link='logit'),data=train)        
-rm_uni_model<- glm(target ~ rm,family=binomial(link='logit'),data=train)          
-age_uni_model<- glm(target ~ age,family=binomial(link='logit'),data=train)          
-dis_uni_model<- glm(target ~ dis,family=binomial(link='logit'),data=train)            
-rad_uni_model<- glm(target ~ rad,family=binomial(link='logit'),data=train)           
-tax_uni_model<- glm(target ~ tax,family=binomial(link='logit'),data=train)            
-ptratio_uni_model<- glm(target ~ ptratio,family=binomial(link='logit'),data=train)      
-black_uni_model<- glm(target ~ black,family=binomial(link='logit'),data=train)       
-lstat_uni_model<- glm(target ~ lstat,family=binomial(link='logit'),data=train)       
+plot(fitted(log_model_ols), residuals(log_model_ols))
 
+wts <- 1/fitted(lm(abs(residuals(log_model_ols)) ~ fitted(log_model_ols)))^2
 
-models <- list(zn_uni_model,indus_uni_model,
-            chas_uni_model,nox_uni_model,
-            rm_uni_model,age_uni_model,
-            dis_uni_model,rad_uni_model,
-            tax_uni_model,ptratio_uni_model,
-            black_uni_model,lstat_uni_model)
+length(wts)
+length(log_model_ols$residuals)
+log_model_wls <- lm(TARGET_AMT ~ INCOME + TRAVTIME + BLUEBOOK+
+                      OLDCLAIM + YOJ + intEDUCATION + intJOB + CAR_AGE, 
+                    data = log_lin_model, weights = wts)
+summary(log_model_wls)
 
+plot(fitted(log_model_wls), rstandard(log_model_wls))
 ```
   
+  
 ```{r,echo=FALSE,eval=FALSE}
-#Creation of lists 
-var <- c()
-p_val <- c()
-aic <- c()
-auc <- c()
+log_model_ols <- glm(TARGET_AMT ~ INCOME + TRAVTIME + BLUEBOOK+
+                      OLDCLAIM + YOJ + intEDUCATION + intJOB + CAR_AGE, 
+                      data =log_lin_model)
+summary(log_model_ols)
 
-#For loop to run variables over univarate glms
-for(i in models){
-  var <- c(var,variable.names(i)[2])
-  aic <- c(aic,i$aic)
-  p_val <- c(p_val,summary(i)$coef[2, "Pr(>|z|)"])
-  p <- predict(i, newdata=subset(test,select=c(1,2,3,4,5,6,7,8,9,10,11,12,13)), type="response")
-  pr <- prediction(p, test$target)
-  prf <- performance(pr, measure = "tpr", x.measure = "fpr")
-  auc_perf<- performance(pr, measure = "auc")
-  auc_val <- auc_perf@y.values[[1]]
-  auc <- c(auc,auc_val)
-}
+plot(fitted(log_model_ols), residuals(log_model_ols))
 
-kable(data.frame(var,p_val,aic,auc))
+wts <- 1/fitted(lm(abs(residuals(log_model_ols)) ~ fitted(log_model_ols)))^2
+
+length(wts)
+length(log_model_ols$residuals)
+log_model_wls <- glm(TARGET_AMT ~ INCOME + TRAVTIME + BLUEBOOK+
+                      OLDCLAIM + YOJ + intEDUCATION + intJOB + CAR_AGE, 
+                    data = log_lin_model, weights = wts)
+summary(log_model_wls)
+
+plot(fitted(log_model_wls), rstandard(log_model_wls))
+```
+
+
+```{r,echo=FALSE,eval=FALSE}
+backward <- step(log_model_wls)
+summary(backward)
 ```
 
 Here we see the selected output criteria for the linear models run with only a single predictor variable. We examine the p-value (significance), the AIC statistic (goodness-of-fit) and the AUC (Area Under Curve) to measure the potential predictive value of each variable, so we can decide whether or not to include it in our multiple regression model.  We are looking for p-values below .05, AIC values as low as possible, and AUC values as high as possible.
