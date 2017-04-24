@@ -364,6 +364,64 @@ crime.model <- glm(target ~ .,family=binomial(link='logit'),data=crime)
 ##Data Preparation
 
 
+```{r}
+train <- subset(insi, TARGET_FLAG ==1)
+
+# quick look at model with all variables
+KIDSDRIV_lm <- lm(TARGET_AMT ~ KIDSDRIV,data=train)
+AGE_lm <- lm(TARGET_AMT ~ AGE,data=train)
+HOMEKIDS_lm <- lm(TARGET_AMT ~ HOMEKIDS,data=train)
+YOJ_lm <- lm(TARGET_AMT ~ YOJ,data=train)
+INCOME_lm <- lm(TARGET_AMT ~ INCOME,data=train)
+TRAVTIME_lm <- lm(TARGET_AMT ~ TRAVTIME,data=train)
+BLUEBOOK_lm <- lm(TARGET_AMT ~ BLUEBOOK,data=train)
+TIF_lm <- lm(TARGET_AMT ~ TIF,data=train)
+OLDCLAIM_lm <- lm(TARGET_AMT ~ OLDCLAIM,data=train)
+CLM_FREQ_lm <- lm(TARGET_AMT ~ CLM_FREQ,data=train)
+MVR_PTS_lm <- lm(TARGET_AMT ~ MVR_PTS,data=train)
+CAR_AGE_lm <- lm(TARGET_AMT ~ CAR_AGE,data=train)
+blnPARENT1_lm <- lm(TARGET_AMT ~ blnPARENT1,data=train)
+blnMSTATUS_lm <- lm(TARGET_AMT ~ blnMSTATUS,data=train)
+blnSEX_lm <- lm(TARGET_AMT ~ blnSEX,data=train)
+blnCAR_USE_lm <- lm(TARGET_AMT ~ blnCAR_USE,data=train)
+blnNOT_RED_CAR_lm <- lm(TARGET_AMT ~ blnNOT_RED_CAR,data=train)
+blnNOT_REVOKED_lm <- lm(TARGET_AMT ~ blnNOT_REVOKED,data=train)
+blnURBANICITY_lm <- lm(TARGET_AMT ~ blnURBANICITY,data=train)
+intEDUCATION_lm <- lm(TARGET_AMT ~ intEDUCATION,data=train)
+intJOB_lm <- lm(TARGET_AMT ~ intJOB,data=train)
+intCAR_TYPE_lm <- lm(TARGET_AMT ~ intCAR_TYPE,data=train)
+
+models <- list(KIDSDRIV_lm, AGE_lm,HOMEKIDS_lm,YOJ_lm,INCOME_lm,
+              TRAVTIME_lm,BLUEBOOK_lm,TIF_lm,OLDCLAIM_lm,CLM_FREQ_lm,
+              MVR_PTS_lm,CAR_AGE_lm,blnPARENT1_lm,blnMSTATUS_lm,
+              blnSEX_lm,blnCAR_USE_lm,blnNOT_RED_CAR_lm,blnNOT_REVOKED_lm,
+              blnURBANICITY_lm,intEDUCATION_lm,intJOB_lm,intCAR_TYPE_lm)
+
+summary(BLUEBOOK_lm)
+plot(BLUEBOOK_lm)
+plot(train$BLUEBOOK,train$TARGET_AMT)
+abline(BLUEBOOK_lm)
+```
+
+```{r}
+summary(INCOME_lm)$adj.r.squared
+variable.names(INCOME_lm)[2]
+```
+```{r,echo=FALSE,eval=FALSE}
+#Creation of lists 
+var <- c()
+p_val <- c()
+r2_val <- c()
+
+#For loop to run variables over univarate glms
+for(i in models){
+  var <- c(var,variable.names(i)[2])
+  p_val <- c(p_val,summary(i)$coef[2, "Pr(>|t|)"])
+  r2_val <- c(r2_val,summary(i)$adj.r.squared)
+}
+
+data.frame(var,p_val,r2_val)
+```
 
 
 
@@ -376,12 +434,7 @@ crime.model <- glm(target ~ .,family=binomial(link='logit'),data=crime)
 ##Build Models
 
 ```{r,echo=FALSE,warning=FALSE,eval=FALSE}
-## 80% of the sample size
-set.seed(121)
-smp_size <- floor(0.80 * nrow(a.i))
-
-# Subset data for only acciendt
-lin_model <- subset(a.i, TARGET_FLAG == 1)
+lin_model <- subset(insi, TARGET_FLAG == 1)
 Var_lm <- c("TARGET_AMT","TARGET_FLAG","INCOME","TRAVTIME","BLUEBOOK","OLDCLAIM", "YOJ","intEDUCATION","intJOB","CAR_AGE")
 
 log_var <- c("TARGET_AMT","INCOME","BLUEBOOK","OLDCLAIM")
@@ -389,47 +442,50 @@ log_var <- c("TARGET_AMT","INCOME","BLUEBOOK","OLDCLAIM")
 log_lin_model <- lin_model[Var_lm]
 log_lin_model[log_var] <- log(log_lin_model[log_var])
 log_lin_model <- do.call(data.frame,lapply(log_lin_model, function(x) replace(x, is.infinite(x),0)))
-log_lin_model
 ```
 
-One method of developing multiple regression models is to take a stepwise approach.  To accomplish this, we combine our knowledge from the data exploration above with logistic regression. Univariate Logistic Regression is a useful method to understand how each predictor variable interacts individually with the target (response) variable. Looking at various statistics, we determine which variable may impact our target the most.
+```{r,echo=FALSE,eval=FALSE}
+log_model_ols <- lm(TARGET_AMT ~ INCOME + TRAVTIME + BLUEBOOK+
+                      OLDCLAIM + YOJ + intEDUCATION + intJOB + CAR_AGE, 
+                    data =log_lin_model)
+summary(log_model_ols)
 
-```{r,echo=FALSE,warning=FALSE,eval=FALSE}
-## 80% of the sample size
-set.seed(121)
-smp_size <- floor(0.80 * nrow(crime))
+plot(fitted(log_model_ols), residuals(log_model_ols))
 
-## set the seed to make your partition reproductible
-train_ind <- sample(seq_len(nrow(crime)), size = smp_size)
+wts <- 1/fitted(lm(abs(residuals(log_model_ols)) ~ fitted(log_model_ols)))^2
 
-train <- crime[train_ind, ]
-test <- crime[-train_ind, ]
+length(wts)
+length(log_model_ols$residuals)
+log_model_wls <- lm(TARGET_AMT ~ INCOME + TRAVTIME + BLUEBOOK+
+                      OLDCLAIM + YOJ + intEDUCATION + intJOB + CAR_AGE, 
+                    data = log_lin_model, weights = wts)
+summary(log_model_wls)
 
-# quick look at model with all variables
-
-zn_uni_model<- glm(target ~ zn,family=binomial(link='logit'),data=train)           
-indus_uni_model<- glm(target ~ indus,family=binomial(link='logit'),data=train)       
-chas_uni_model<- glm(target ~ chas,family=binomial(link='logit'),data=train)        
-nox_uni_model<- glm(target ~ nox,family=binomial(link='logit'),data=train)        
-rm_uni_model<- glm(target ~ rm,family=binomial(link='logit'),data=train)          
-age_uni_model<- glm(target ~ age,family=binomial(link='logit'),data=train)          
-dis_uni_model<- glm(target ~ dis,family=binomial(link='logit'),data=train)            
-rad_uni_model<- glm(target ~ rad,family=binomial(link='logit'),data=train)           
-tax_uni_model<- glm(target ~ tax,family=binomial(link='logit'),data=train)            
-ptratio_uni_model<- glm(target ~ ptratio,family=binomial(link='logit'),data=train)      
-black_uni_model<- glm(target ~ black,family=binomial(link='logit'),data=train)       
-lstat_uni_model<- glm(target ~ lstat,family=binomial(link='logit'),data=train)       
-
-
-models <- list(zn_uni_model,indus_uni_model,
-            chas_uni_model,nox_uni_model,
-            rm_uni_model,age_uni_model,
-            dis_uni_model,rad_uni_model,
-            tax_uni_model,ptratio_uni_model,
-            black_uni_model,lstat_uni_model)
-
+plot(fitted(log_model_wls), rstandard(log_model_wls))
 ```
   
+  
+```{r,echo=FALSE,eval=FALSE}
+log_model_ols <- glm(TARGET_AMT ~ INCOME + TRAVTIME + BLUEBOOK+
+                      OLDCLAIM + YOJ + intEDUCATION + intJOB + CAR_AGE, 
+                      data =log_lin_model)
+summary(log_model_ols)
+
+plot(fitted(log_model_ols), residuals(log_model_ols))
+
+wts <- 1/fitted(lm(abs(residuals(log_model_ols)) ~ fitted(log_model_ols)))^2
+
+length(wts)
+length(log_model_ols$residuals)
+log_model_wls <- glm(TARGET_AMT ~ INCOME + TRAVTIME + BLUEBOOK+
+                      OLDCLAIM + YOJ + intEDUCATION + intJOB + CAR_AGE, 
+                    data = log_lin_model, weights = wts)
+summary(log_model_wls)
+
+plot(fitted(log_model_wls), rstandard(log_model_wls))
+```
+
+
 ```{r,echo=FALSE,eval=FALSE}
 #Creation of lists 
 var <- c()
