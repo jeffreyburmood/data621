@@ -213,11 +213,6 @@ kable(summary(insi[7:12]))
 kable(summary(insi[13:18]))
 kable(summary(insi[19:length(insi)]))
 
-# Visual check for obvious correlations
-#pairs(insi,col=insi$TARGET_FLAG)
-#
-# no NAs found so no missing values to remove or fix
-#
 # Look over the variables checking for outliers/influential points, correlation between variables, etc. using box plots.
 #
 # set the plot-page configuration
@@ -260,14 +255,24 @@ boxplot(insi$MVR_PTS, main="MVR_PTS")
 ```
 
 ```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3}
-par(mfcol=c(1,3))
+#par(mfcol=c(1,3))
 boxplot(insi$CAR_AGE, main="CAR_AGE")
 ```
+   
+```{r,echo=FALSE,warning=FALSE}
+# Lastly, build a correlation table to identify any relationships between the predictor variables
+# get a table of only predictor variables
+insi.pred <- subset(insi,select=-c(TARGET_FLAG,TARGET_AMT))
 
-
-
-
-
+cor.table <- cor(insi.pred) # build a table of inter-variable correlation values
+kable(cor.table[,1:8])
+kable(cor.table[,9:16])
+```
+  
+Here are the results from an analysis of the predictor variable correlations:  
+  
+The are no strong correlations (>70%) between predictor variables, not enough to allow consideration of removing a variable from the model based on a high correlation with another variable. There is some moderate correlation (30-50%) between some variable highlighting obvious relationships such as HOMEKIDS-KIDSDRIV, HOME_VAL-INCOME, EDUCATION-INCOME, JOB-INCOME, CAR_TYPE-BLUEBOOK, CLM_FREQ-OLDCLAIM, and MVR_PTS-CLM_FREQ.  
+  
 Based on an analysis of the box plots, the following variables have some outliers that may, or may not, exert influence on the regression results: 
     - KIDSDRIV, HOME_VAL, TRAVTIME, MVR_PTS  
   
@@ -326,23 +331,7 @@ plot(table(insi$TRAVTIME))
 plot(insi$TRAVTIME)
 ```  
 
-```  
 
-
-
-
-
-
-
-
-```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
-
-
-# quick look at model with all variables
-crime.model <- glm(target ~ .,family=binomial(link='logit'),data=crime)
-
-```
-  
 According to the description, the variables *zn*, *indus*, and *age* are area, or land, proportions. According to the statistical summary, the values for these variables are all within the range [1,100] that we would expect.  
   
 Based on our detailed review of the variables that contained outliers, the following variables could be problematic:  
@@ -381,12 +370,7 @@ crime$target <- as.factor(crime$target)
 crime$chas <- as.factor(crime$chas)
 crime_eval$chas <- as.factor(crime_eval$chas)
 
-# get a table of non-factor variables
-crime.nofactor <- subset(crime,select=-c(chas,target))
-# build a correlation table to study the variable relationships
-cor.table <- cor(crime.nofactor) # build a table of inter-variable correlation values
-kable(cor.table[,1:6])
-kable(cor.table[,7:12])
+
 ```
   
 The correlation table above shows that the variable *zn* is moderately correlated to the variable *dis*. The plot of the *dis* data shows a much better distribution of values. Consequently, one possibility is to remove *zn* from the model and use *dis* instead.  Before doing this, we should look at the real-world context of the two variables to determine if they are meaningfully related.
