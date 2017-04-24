@@ -30,7 +30,7 @@ Approach Steps:
 {\huge Data Exploration}
 \end{center}
 
---------
+---
 
 ##Data Exploration
 
@@ -48,7 +48,8 @@ library(stringr)
 ##library(Hmisc)
 ##library(mi)
 library(mice)
-
+library(dplyr)
+library(reshape2)
 #
 # Read in the dataset from github
 ins <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/master/Homework4/data/insurance_training_data.csv"),header=TRUE,na.strings=c(""," "), stringsAsFactors = FALSE)
@@ -326,14 +327,22 @@ plot(table(insi$TRAVTIME))
 plot(insi$TRAVTIME)
 ```  
 
-```  
+The last step in the data exploration is to examine the correlation tables, to see if there is any potential correlations that will impact our models. The below table shows the a condense correlation table showing only the highest positive and negative correlations (in this case above 0.5 and below -.5)
 
+  
+```{r,echo=FALSE,warning=FALSE,eval=FALSE}
 
+# build a correlation table to study the variable relationships
+cor.table <- cor(insi) # build a table of inter-variable correlation values
+cor.table <- melt(cor.table)
+cor.table <- subset(cor.table, value != 1)
+cor.table <- subset(cor.table, value >= .5 | value <= -.5)
+cor.table <- distinct(cor.table,value, .keep_all =  TRUE)
+colnames<-c("Var 1","Var 2", "Correlations")
 
-
-
-
-
+kable(cor.table)
+```
+As you can see, certain variables are correlated, and they are values that we would expect to be correlated. We expect there to be a correlation between income and jobs/home value and educations, as these are well established indicators of success. Higher educated people are more likely to secure higher paying jobs, which we can see in the higher correlations for these values. Furthermore, car type is going to be a clear indicator of the value of the car. Sports cars and suvs cost more than compacts. An interestiong but also intuitive correlations exists bewteen gender and car type and car color.  
 
 ```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
 
@@ -343,23 +352,7 @@ crime.model <- glm(target ~ .,family=binomial(link='logit'),data=crime)
 
 ```
   
-According to the description, the variables *zn*, *indus*, and *age* are area, or land, proportions. According to the statistical summary, the values for these variables are all within the range [1,100] that we would expect.  
-  
-Based on our detailed review of the variables that contained outliers, the following variables could be problematic:  
-  
-The predictor variable *zn* is highly right skewed, we can confirm this by comparing the median and mean where the median is 0.0, but the mean is 11.58. The frequency count plot shows how poor the distribution is due to clustering of the data at one extreme.  
-  
-The predictor variable *black* is highly left skewed. We can confirm this by comparing the median and mean where the median is 391.34 and the mean is 357.12. The frequency count plot shows how poor the distribution is due to clustering of the data at one extreme.  
-  
-The predictor variable *dis* is slightly right skewed. We can confirm this by comparing the median and mean where the median is 3.191 and the mean is 3.796.  
-  
-Fortunately, no missing data, or NAs, were found.  
-  
-The following data corrections were identified in this section:  
-  
-(1) The predictor variable *chas* and the response variable *target* are categorical (binary), so we need to convert them to factors.  
-  
-(2) Need to determine if there are other variables highly coorelated with the *zn* or *black* variables that do not have the severe skew and outliers. This could allow us to remove the *zn* or *black* variables from the model.  
+
 
 
 \begin{center}
@@ -371,25 +364,7 @@ The following data corrections were identified in this section:
 ##Data Preparation
 
 
-The variable changes we identified so far include converting the predictor variable *chas* and the response variable *target* to factors.  Next we will look at how each variable correlates to all the others:  
 
-  
-```{r,echo=FALSE,warning=FALSE,eval=FALSE}
-# Based on the data exploration results, identify any changes, transformations, and new or deleted variables to use for the next step of building the models.
-# Need to set variables to a factor as required
-crime$target <- as.factor(crime$target)
-crime$chas <- as.factor(crime$chas)
-crime_eval$chas <- as.factor(crime_eval$chas)
-
-# get a table of non-factor variables
-crime.nofactor <- subset(crime,select=-c(chas,target))
-# build a correlation table to study the variable relationships
-cor.table <- cor(crime.nofactor) # build a table of inter-variable correlation values
-kable(cor.table[,1:6])
-kable(cor.table[,7:12])
-```
-  
-The correlation table above shows that the variable *zn* is moderately correlated to the variable *dis*. The plot of the *dis* data shows a much better distribution of values. Consequently, one possibility is to remove *zn* from the model and use *dis* instead.  Before doing this, we should look at the real-world context of the two variables to determine if they are meaningfully related.
 
 
 \begin{center}
@@ -399,6 +374,23 @@ The correlation table above shows that the variable *zn* is moderately correlate
 --------
 
 ##Build Models
+
+```{r,echo=FALSE,warning=FALSE,eval=FALSE}
+## 80% of the sample size
+set.seed(121)
+smp_size <- floor(0.80 * nrow(a.i))
+
+# Subset data for only acciendt
+lin_model <- subset(a.i, TARGET_FLAG == 1)
+Var_lm <- c("TARGET_AMT","TARGET_FLAG","INCOME","TRAVTIME","BLUEBOOK","OLDCLAIM", "YOJ","intEDUCATION","intJOB","CAR_AGE")
+
+log_var <- c("TARGET_AMT","INCOME","BLUEBOOK","OLDCLAIM")
+
+log_lin_model <- lin_model[Var_lm]
+log_lin_model[log_var] <- log(log_lin_model[log_var])
+log_lin_model <- do.call(data.frame,lapply(log_lin_model, function(x) replace(x, is.infinite(x),0)))
+log_lin_model
+```
 
 One method of developing multiple regression models is to take a stepwise approach.  To accomplish this, we combine our knowledge from the data exploration above with logistic regression. Univariate Logistic Regression is a useful method to understand how each predictor variable interacts individually with the target (response) variable. Looking at various statistics, we determine which variable may impact our target the most.
 
