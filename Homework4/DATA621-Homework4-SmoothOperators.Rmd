@@ -2,8 +2,8 @@
 title: "DATA621-Homework4-SmoothOperators"
 author: "Rob Hodde, Matt Farris, Jeffrey Burmood, Bin Lin"
 date: "4/17/2017"
-output:  pdf_document
---------  
+output: pdf_document
+---  
   
 ###Problem Description
 
@@ -42,9 +42,6 @@ library(knitr)
 library(Hmisc)
 library(caret)
 library(stringr)
-##library(Amelia)
-##library(Hmisc)
-##library(mi)
 library(mice)
 library(dplyr)
 library(reshape2)
@@ -356,7 +353,7 @@ For the logistic regression analysis, we would like to remove as much of the ske
 The last step in the data exploration is to examine the correlation tables, to see if there is any potential correlations that will impact our models. The below table shows the a condense correlation table showing only the highest positive and negative correlations (in this case above 0.5 and below -.5)
 
   
-```{r,echo=FALSE,warning=FALSE,eval=FALSE}
+```{r,echo=FALSE,warning=FALSE}
 # build a correlation table to study the variable relationships
 cor.table <- cor(insi) # build a table of inter-variable correlation values
 cor.table <- melt(cor.table)
@@ -438,7 +435,7 @@ models <- list(KIDSDRIV_lm, AGE_lm,HOMEKIDS_lm,YOJ_lm,INCOME_lm,
 ```
 
 
-```{r,echo=FALSE,eval=FALSE}
+```{r,echo=FALSE,warning=FALSE}
 #Creation of lists 
 var <- c()
 p_val <- c()
@@ -466,7 +463,7 @@ One method of developing multiple regression models is to take a stepwise approa
   
 ###Linear Regression Models  
   
-```{r,echo=FALSE,warning=FALSE,eval=FALSE}
+```{r,echo=FALSE,warning=FALSE}
 lin_model <- subset(insi, TARGET_FLAG == 1)
 Var_lm <- c("TARGET_AMT","TARGET_FLAG","INCOME","TRAVTIME","BLUEBOOK","OLDCLAIM", "YOJ","intEDUCATION","intJOB","CAR_AGE")
 
@@ -477,7 +474,7 @@ log_lin_model[log_var] <- log(log_lin_model[log_var])
 log_lin_model <- do.call(data.frame,lapply(log_lin_model, function(x) replace(x, is.infinite(x),0)))
 ```
 
-```{r,echo=FALSE,eval=FALSE}
+```{r,echo=FALSE,warning=FALSE}
 model_ols <- lm(TARGET_AMT ~ INCOME + TRAVTIME + BLUEBOOK+
                       OLDCLAIM + YOJ + intEDUCATION + intJOB + CAR_AGE, 
                     data =lin_model)
@@ -499,7 +496,7 @@ plot(fitted(model_wls), rstandard(model_wls))
 
 
 
-```{r,echo=FALSE,eval=FALSE}
+```{r,echo=FALSE,warning=FALSE}
 log_model_ols <- lm(TARGET_AMT ~ INCOME + TRAVTIME + BLUEBOOK+
                       OLDCLAIM + YOJ + intEDUCATION + intJOB + CAR_AGE, 
                     data =log_lin_model)
@@ -519,27 +516,20 @@ summary(log_model_wls)
 plot(fitted(log_model_wls), rstandard(log_model_wls))
 ```
 
-```{r,echo=FALSE,eval=FALSE}
+```{r,echo=FALSE,warning=FALSE}
 backward <- step(model_wls)
 summary(backward)
 ```
 
 
 
-### Model 1 
+### Logistic Regression Model 
 
 As a baseline, we start with a multiple logistic regression model that includes every predictor variable:
 
 In this model-and in all the models- we set aside 20% of the training data and use 80% to train the model we then use the model to predict the outcome of the remaining 20% of the data.  The model yields an Area Under Curve of .95, meaning it chose correctly 95% of the time.
-
-
-### Model 2
   
-In this scenario we attempt to create the simplest model possible by using only one variable - the one that provides the highest overall AUC (performance) by itself.  We calculate AUC for each variable separately and then select the highest result. 
-
-
-By combining three variables - *nox*, *rad* and *zn* - that is, the concentration of nitrogen oxides, access to radial highways and the proportion of land zoned for large lots, we can predict with 94% accuracy whether the crime rate at this property is above or below average.  Since this is very close to the performance of the model using all variables (95%), we can be confident in using these three variables for our decision support process, and disregarding the others. 
-
+  
 ```{r,echo=FALSE,warning=FALSE}
 # build the data frame to be used for logistic regression modeling
 insi.log <- insi[,!(names(insi) %in% c("OLDCLAIM","TRAVTIME","BLUEBOOK","HOME_VAL"))]
@@ -554,9 +544,11 @@ train_ind <- sample(seq_len(nrow(insi.log)), size = smp_size)
 train <- insi.log[train_ind, ]
 test <- insi.log[-train_ind, ]
 ```
-
-```{r,echo=FALSE,eval=FALSE}
-
+  
+In this scenario we attempt to create the simplest model possible by using only one variable - the one that provides the highest overall AUC (performance) by itself.  We calculate AUC for each variable separately and then select the highest result.  
+  
+```{r,echo=FALSE,warning=FALSE}
+# build single variable models for analysis
 
 KIDSDRIV_model<- glm(TARGET_FLAG ~ KIDSDRIV,family=binomial(link='logit'),data=train)           
 HOMEKIDS_model<- glm(TARGET_FLAG ~ HOMEKIDS,family=binomial(link='logit'),data=train)       
@@ -586,9 +578,6 @@ models <- list(KIDSDRIV_model,HOMEKIDS_model,AGE_model,blnPARENT1_model,logBLUEB
                CLM_FREQ_model,TIF_model,MVR_PTS_model,blnSEX_model,blnCAR_USE_model,blnNOT_RED_CAR_model,
                blnNOT_REVOKED_model,blnURBANICITY_model,logTRAVTIME_model,logOLDCLAIM_model,
                logHOME_VAL_model)
-```
-
-```{r}
 
 #Creation of lists 
 var <- c()
@@ -610,11 +599,12 @@ for(i in models){
     auc <- c(auc,auc_val)
  }
  
+# build a table of the model analysis results
 kable(data.frame(var,p_val,aic,auc))
 ```
 
 
-#### MODEL 3 - Backward regression starting with all variables
+#### MODEL 1 - Backward regression starting with all variables
 ```{r,echo=FALSE,warning=FALSE}
 # Simple backward regression
 model_3 <- glm(TARGET_FLAG ~ .-TARGET_AMT,family=binomial(link='logit'),data=train)
