@@ -49,7 +49,6 @@ library(reshape2)
 # Read in the dataset from github
 ins <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/master/Homework4/data/insurance_training_data.csv"),header=TRUE,na.strings=c(""," "), stringsAsFactors = FALSE)
 ins_eval <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/master/Homework4/data/insurance-evaluation-data.csv"),header=TRUE,na.strings=c(""," "), stringsAsFactors = FALSE)
-
 ```
   
 
@@ -152,7 +151,6 @@ insi <- subset(mice.ic,select = c("INDEX", "TARGET_FLAG", "TARGET_AMT", "KIDSDRI
 
 head(insi)
 insi2 <- insi
-
 ```
 
 
@@ -360,9 +358,8 @@ cor.table <- melt(cor.table)
 cor.table <- subset(cor.table, value != 1)
 cor.table <- subset(cor.table, value >= .5 | value <= -.5)
 cor.table <- distinct(cor.table,value)
-colnames(cor.table)<-c("Var 1","Var 2", "Correlations")
-
-kable(cor.table)
+#colnames(cor.table)<-c("Var 1","Var 2", "Correlations")
+#kable(cor.table)
 ```
 As you can see, certain variables are correlated, and they are values that we would expect to be correlated. We expect there to be a correlation between income and jobs/home value and educations, as these are well established indicators of success. Higher educated people are more likely to secure higher paying jobs, which we can see in the higher correlations for these values. Furthermore, car type is going to be a clear indicator of the value of the car. Sports cars and suvs cost more than compacts. An interestiong but also intuitive correlations exists bewteen gender and car type and car color. The car type is very interesting, as we almost arbitraily set the type to a numeric value 1 - 6 according to this list "Sports Car","SUV","Pickup","Minivan","Van","Panel Truck" respectively. As the correlation is negative, it shows that as the value goes "up/higher" we see less women in these types of cars. Though this is a binary correlation, and the weight of such can be consider not very conclusive, it is interesting to note. The most likely reason for this offset correlation is because panel truck is listed highest, which we can assume would be a predominately male oriented mode of transportation. 
 
@@ -391,9 +388,7 @@ insi$logOLDCLAIM <- log(insi$OLDCLAIM)
 insi$logBLUEBOOK <- log(insi$BLUEBOOK)
 insi$logTRAVTIME <- log(insi$TRAVTIME)
 insi$logHOME_VAL <- log(insi$HOME_VAL)
-
 ```
-
 
 
 Next a brief review of the linear models of all the variables
@@ -401,7 +396,6 @@ Next a brief review of the linear models of all the variables
 # quick look at model with all variables
 
 lin_insi <- subset(insi, TARGET_FLAG ==1)
-
 
 KIDSDRIV_lm <- lm(TARGET_AMT ~ KIDSDRIV,data=lin_insi)
 AGE_lm <- lm(TARGET_AMT ~ AGE,data=lin_insi)
@@ -431,7 +425,6 @@ models <- list(KIDSDRIV_lm, AGE_lm,HOMEKIDS_lm,YOJ_lm,INCOME_lm,
               MVR_PTS_lm,CAR_AGE_lm,blnPARENT1_lm,blnMSTATUS_lm,
               blnSEX_lm,blnCAR_USE_lm,blnNOT_RED_CAR_lm,blnNOT_REVOKED_lm,
               blnURBANICITY_lm,intEDUCATION_lm,intJOB_lm,intCAR_TYPE_lm)
-
 ```
 
 
@@ -513,6 +506,8 @@ log_model_wls <- lm(TARGET_AMT ~ INCOME + TRAVTIME + BLUEBOOK+
                     data = log_lin_model, weights = wts)
 summary(log_model_wls)
 
+
+Parameters <- c("Accuracy", "Classification Error Rate", "Precision", "Sensitivity", "Specificity", "F1 Score")
 plot(fitted(log_model_wls), rstandard(log_model_wls))
 ```
 
@@ -520,7 +515,6 @@ plot(fitted(log_model_wls), rstandard(log_model_wls))
 backward <- step(model_wls)
 summary(backward)
 ```
-
 
 
 ### Logistic Regression Model 
@@ -617,7 +611,6 @@ prf <- performance(pr, measure = "tpr", x.measure = "fpr")
 plot(prf)
 abline(a = 0, b = 1)
 
-
 #
 auc <- performance(pr, measure = "auc")
 auc <- auc@y.values[[1]]
@@ -648,20 +641,119 @@ Model3 <- c(confusion_m3$overall["Accuracy"], 1 - confusion_m3$overall["Accuracy
 model_summary <- data.frame(Parameters, Model3)
 
 kable(model_summary)
-
 ```
-
-
 
 \begin{center}
 {\huge Choose Model}
 \end{center}
-
 
 --------
 
 ##Choose Model
 
 
+We would like to pick Backward logistic regression model to make prediction for the evaluation dataset (non-zero value). This model has accuracy rate as high as 80%. In the meantime, the precision and sensitivity are at the level of 82% and 92%, which indicate this model is very good at eliminating false negative and false positive situations. Both AUC and F1 Score are around 80%, which is also telling us that it has high accuracy in terms of predicting the final response variables.
+
+
+```{r, echo=FALSE, warning=FALSE}
+#The following is simply the data preparation step. To get evaluation data ready to plug into our model.
+
+eval_copy <- ins_eval
+eval_copy$MSTATUS    <- str_replace(eval_copy$MSTATUS, pattern = "z_No", replacement = "No")
+eval_copy$SEX        <- str_replace(eval_copy$SEX, pattern = "z_F", replacement = "F")
+eval_copy$EDUCATION  <- str_replace(eval_copy$EDUCATION, pattern = "z_High School", replacement = "Secondary")
+eval_copy$EDUCATION  <- str_replace(eval_copy$EDUCATION, pattern = "<High School", replacement = "Primary")
+eval_copy$JOB        <- str_replace(eval_copy$JOB, pattern = "z_Blue Collar", replacement = "Tradesperson")
+eval_copy$CAR_TYPE   <- str_replace(eval_copy$CAR_TYPE, pattern = "z_SUV", replacement = "SUV")
+eval_copy$URBANICITY <- str_replace(eval_copy$URBANICITY, pattern = "Highly Urban/ Urban", replacement = "Urban")
+eval_copy$URBANICITY <- str_replace(eval_copy$URBANICITY, pattern = "z_Highly Rural/ Rural", replacement = "Rural")
+
+eval_copy$CAR_AGE[eval_copy$CAR_AGE < 0 ] <- 0
+eval_copy$TARGET_AMT <- round(eval_copy$TARGET_AMT,digits = 0)
+
+eval_copy$TARGET_FLAG <- sToNum(eval_copy$TARGET_FLAG)
+eval_copy$INCOME      <- sToNum(eval_copy$INCOME)
+eval_copy$HOME_VAL    <- sToNum(eval_copy$HOME_VAL)
+eval_copy$BLUEBOOK    <- sToNum(eval_copy$BLUEBOOK)
+eval_copy$OLDCLAIM    <- sToNum(eval_copy$OLDCLAIM)
+
+eval_copy$blnPARENT1     <- sToBLN(eval_copy$PARENT1)
+eval_copy$blnMSTATUS     <- sToBLN(eval_copy$MSTATUS)
+eval_copy$blnSEX         <- sToBLN(eval_copy$SEX)
+eval_copy$blnCAR_USE     <- sToBLN(eval_copy$CAR_USE)
+eval_copy$blnNOT_RED_CAR <- sToBLN_Reverse(eval_copy$RED_CAR)
+eval_copy$blnNOT_REVOKED <- sToBLN_Reverse(eval_copy$REVOKED)
+eval_copy$blnURBANICITY  <- sToBLN(eval_copy$URBANICITY)
+
+educ <- data.frame(EDUCATION = c("Primary","Secondary","Bachelors","Masters","PhD"), intEDUCATION = c(1,2,3,4,5))
+eval_copy$intEDUCATION <- educ$intEDUCATION[match(eval_copy$EDUCATION,educ$EDUCATION)]
+job <- data.frame(JOB = c("Student","Home Maker", "Clerical", "Tradesperson", "Professional", "Manager", "Lawyer", "Doctor"), intJOB = c(1,2,3,4,5,6,7,8))
+eval_copy$intJOB <- job$intJOB[match(eval_copy$JOB, job$JOB)]
+typ <- data.frame(CAR_TYPE = c("Sports Car","SUV","Pickup","Minivan","Van","Panel Truck"), intCAR_TYPE = c(1,2,3,4,5,6)) 
+eval_copy$intCAR_TYPE <- typ$intCAR_TYPE[match(eval_copy$CAR_TYPE, typ$CAR_TYPE)]
+
+mice.i <- mice(eval_copy, m = 3, print=F)
+mice.ic <- complete(mice.i,1)
+
+eval_copy <- subset(mice.ic, select = c("TARGET_FLAG", "TARGET_AMT", "KIDSDRIV", "AGE", "HOMEKIDS", "YOJ", "INCOME", "HOME_VAL", "TRAVTIME", "BLUEBOOK", "TIF", "OLDCLAIM", "CLM_FREQ", "MVR_PTS", "CAR_AGE", "blnPARENT1", "blnMSTATUS", "blnSEX", "blnCAR_USE", "blnNOT_RED_CAR", "blnNOT_REVOKED", "blnURBANICITY", "intEDUCATION", "intJOB", "intCAR_TYPE"))
+
+OLDCLAIM.median <- mean(eval_copy$OLDCLAIM)
+HOME_VAL.median <- median(eval_copy$HOME_VAL)
+BLUEBOOK.median <- median(eval_copy$BLUEBOOK)
+TRAVTIME.median <- median(eval_copy$TRAVTIME)
+
+eval_copy$OLDCLAIM[eval_copy$OLDCLAIM <= 0] <- OLDCLAIM.median
+eval_copy$HOME_VAL[eval_copy$HOME_VAL <= 0] <- HOME_VAL.median
+
+eval_copy$logOLDCLAIM <- log(eval_copy$OLDCLAIM)
+eval_copy$logBLUEBOOK <- log(eval_copy$BLUEBOOK)
+eval_copy$logTRAVTIME <- log(eval_copy$TRAVTIME)
+eval_copy$logHOME_VAL <- log(eval_copy$HOME_VAL)
+```
+
+
+```{r, echo=FALSE, warning=FALSE}
+# Built the model using the train dataset. Then we save the results under TARGET_FLAG in eval dataset.
+model_3 <- glm(TARGET_FLAG ~ KIDSDRIV + INCOME + TIF + CLM_FREQ + MVR_PTS + blnPARENT1 + blnMSTATUS + blnCAR_USE + blnNOT_REVOKED + blnURBANICITY + intEDUCATION + intJOB + intCAR_TYPE + logOLDCLAIM + logBLUEBOOK + logTRAVTIME + logHOME_VAL, family = binomial(link='logit'), data = train)
+summary(model_3)
+
+p <- predict(model_3, newdata = eval_copy, type = "response")
+eval_copy$TARGET_FLAG <- ifelse(p >= .50, 1, 0)
+```
+
+
+For linear regression model, all the models we created only contain one variable, which is BLUEBOOK. According to the following summary statistics, none of the model is performing significantly better than the others. They have very similar p-value, mean squared error, r-squared, and F-statistics. The R-sqaured is very low, even the best model we have is only 1.63%, which might indicate our model lack validity. Or it could also indicate the claim amount of motor vehicle accident tends to be unpredictable.
+
+
+```{r, echo=FALSE, warning=FALSE}
+Parameters <- c("p-value", "Mean Squared Error", "R^2", "F-Statistics")
+
+m1 <- c(summary(model_ols)$coef[4, "Pr(>|t|)"], mean(summary(model_ols)$residuals^2), summary(model_ols)$r.squared, summary(model_ols)$fstatistic[1])
+m2 <- c(summary(model_wls)$coef[4, "Pr(>|t|)"], mean(summary(model_wls)$residuals^2), summary(model_wls)$r.squared, summary(model_wls)$fstatistic[1])
+m3 <- c(summary(log_model_ols)$coef[4, "Pr(>|t|)"], mean(summary(log_model_ols)$residuals^2), summary(log_model_ols)$r.squared, summary(log_model_ols)$fstatistic[1])
+m4 <- c(summary(log_model_wls)$coef[4, "Pr(>|t|)"], mean(summary(log_model_wls)$residuals^2), summary(log_model_wls)$r.squared, summary(log_model_wls)$fstatistic[1])
+
+
+#I got a out of bound error for m5, I do not know how to fix it. 
+
+#m5 <- c(summary(backward)$coef[4, "Pr(>|t|)"], mean(summary(backward)$residuals^2), summary(backward)$r.squared, summary(backward)$fstatistic[1])
+
+model_summary <- data.frame(Parameters, m1, m2, m3, m4)
+model_summary
+```
+
+
+```{r, echo=FALSE, warning=FALSE}
+#Build model based on the independent variable BLUEBOOK. Then predict the result for eval
+
+linear_model <- lm(TARGET_AMT ~ BLUEBOOK, data = insi)
+summary(linear_model)
+eval_copy$TARGET_AMT <- predict(linear_model, newdata = eval_copy, type = "response")
+```
+
+
+```{r, echo=FALSE, warning=FALSE}
+kable(head(eval_copy[,c(1:10)], 20))
+```
 
 The Smooth Operators of R Fusion Have Struck Again.
