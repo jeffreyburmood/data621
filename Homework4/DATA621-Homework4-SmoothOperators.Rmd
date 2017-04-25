@@ -3,8 +3,6 @@ title: "DATA621-Homework4-SmoothOperators"
 author: "Rob Hodde, Matt Farris, Jeffrey Burmood, Bin Lin"
 date: "4/17/2017"
 output:  pdf_document
-  
-  
 --------  
   
 ###Problem Description
@@ -96,8 +94,6 @@ sToBLN_Reverse <- function(a){
   return(a)
 }
 
-
-
 #MAKE A COPY OF THE IMPORTED TRAINING DATA FRAME
 insc <- ins 
 
@@ -158,10 +154,9 @@ summary(insi)  #  <---- USE insi DATA FRAME for modeling with imputed data  ***
 insi <- subset(mice.ic,select = c("INDEX", "TARGET_FLAG", "TARGET_AMT", "KIDSDRIV", "AGE", "HOMEKIDS", "YOJ", "INCOME", "HOME_VAL", "TRAVTIME", "BLUEBOOK", "TIF", "OLDCLAIM", "CLM_FREQ", "MVR_PTS", "CAR_AGE", "blnPARENT1", "blnMSTATUS", "blnSEX", "blnCAR_USE", "blnNOT_RED_CAR", "blnNOT_REVOKED", "blnURBANICITY", "intEDUCATION", "intJOB", "intCAR_TYPE"))
 
 head(insi)
-
+insi2 <- insi
 
 ```
-
 
 
 
@@ -362,20 +357,17 @@ The last step in the data exploration is to examine the correlation tables, to s
 
   
 ```{r,echo=FALSE,warning=FALSE,eval=FALSE}
-
 # build a correlation table to study the variable relationships
 cor.table <- cor(insi) # build a table of inter-variable correlation values
 cor.table <- melt(cor.table)
 cor.table <- subset(cor.table, value != 1)
 cor.table <- subset(cor.table, value >= .5 | value <= -.5)
-cor.table <- distinct(cor.table,value, .keep_all =  TRUE)
-colnames<-c("Var 1","Var 2", "Correlations")
+cor.table <- distinct(cor.table,value)
+colnames(cor.table)<-c("Var 1","Var 2", "Correlations")
 
 kable(cor.table)
 ```
-As you can see, certain variables are correlated, and they are values that we would expect to be correlated. We expect there to be a correlation between income and jobs/home value and educations, as these are well established indicators of success. Higher educated people are more likely to secure higher paying jobs, which we can see in the higher correlations for these values. Furthermore, car type is going to be a clear indicator of the value of the car. Sports cars and suvs cost more than compacts. An interestiong but also intuitive correlations exists bewteen gender and car type and car color.  
-
-
+As you can see, certain variables are correlated, and they are values that we would expect to be correlated. We expect there to be a correlation between income and jobs/home value and educations, as these are well established indicators of success. Higher educated people are more likely to secure higher paying jobs, which we can see in the higher correlations for these values. Furthermore, car type is going to be a clear indicator of the value of the car. Sports cars and suvs cost more than compacts. An interestiong but also intuitive correlations exists bewteen gender and car type and car color. The car type is very interesting, as we almost arbitraily set the type to a numeric value 1 - 6 according to this list "Sports Car","SUV","Pickup","Minivan","Van","Panel Truck" respectively. As the correlation is negative, it shows that as the value goes "up/higher" we see less women in these types of cars. Though this is a binary correlation, and the weight of such can be consider not very conclusive, it is interesting to note. The most likely reason for this offset correlation is because panel truck is listed highest, which we can assume would be a predominately male oriented mode of transportation. 
 
 \begin{center}
 {\huge Data Preparation}
@@ -385,12 +377,7 @@ As you can see, certain variables are correlated, and they are values that we wo
 
 ##Data Preparation
 
-
-```{r}
-train <- subset(insi, TARGET_FLAG ==1)
-
-```
-  
+One means of data preparation we decided to do was to take the log of several of the valiables: 
 ```{r,echo=FALSE,warning=FALSE}
 # perform the log transformation for the selected predictor variables and add to the data frame
 # no variables used in the log transform can have a value of 0
@@ -407,30 +394,40 @@ insi$logOLDCLAIM <- log(insi$OLDCLAIM)
 insi$logBLUEBOOK <- log(insi$BLUEBOOK)
 insi$logTRAVTIME <- log(insi$TRAVTIME)
 insi$logHOME_VAL <- log(insi$HOME_VAL)
-  
+
+```
+
+
+
+Next a brief review of the linear models of all the variables
+```{r,echo=FALSE,warning=FALSE}
 # quick look at model with all variables
-KIDSDRIV_lm <- lm(TARGET_AMT ~ KIDSDRIV,data=train)
-AGE_lm <- lm(TARGET_AMT ~ AGE,data=train)
-HOMEKIDS_lm <- lm(TARGET_AMT ~ HOMEKIDS,data=train)
-YOJ_lm <- lm(TARGET_AMT ~ YOJ,data=train)
-INCOME_lm <- lm(TARGET_AMT ~ INCOME,data=train)
-TRAVTIME_lm <- lm(TARGET_AMT ~ TRAVTIME,data=train)
-BLUEBOOK_lm <- lm(TARGET_AMT ~ BLUEBOOK,data=train)
-TIF_lm <- lm(TARGET_AMT ~ TIF,data=train)
-OLDCLAIM_lm <- lm(TARGET_AMT ~ OLDCLAIM,data=train)
-CLM_FREQ_lm <- lm(TARGET_AMT ~ CLM_FREQ,data=train)
-MVR_PTS_lm <- lm(TARGET_AMT ~ MVR_PTS,data=train)
-CAR_AGE_lm <- lm(TARGET_AMT ~ CAR_AGE,data=train)
-blnPARENT1_lm <- lm(TARGET_AMT ~ blnPARENT1,data=train)
-blnMSTATUS_lm <- lm(TARGET_AMT ~ blnMSTATUS,data=train)
-blnSEX_lm <- lm(TARGET_AMT ~ blnSEX,data=train)
-blnCAR_USE_lm <- lm(TARGET_AMT ~ blnCAR_USE,data=train)
-blnNOT_RED_CAR_lm <- lm(TARGET_AMT ~ blnNOT_RED_CAR,data=train)
-blnNOT_REVOKED_lm <- lm(TARGET_AMT ~ blnNOT_REVOKED,data=train)
-blnURBANICITY_lm <- lm(TARGET_AMT ~ blnURBANICITY,data=train)
-intEDUCATION_lm <- lm(TARGET_AMT ~ intEDUCATION,data=train)
-intJOB_lm <- lm(TARGET_AMT ~ intJOB,data=train)
-intCAR_TYPE_lm <- lm(TARGET_AMT ~ intCAR_TYPE,data=train)
+
+lin_insi <- subset(insi, TARGET_FLAG ==1)
+
+
+KIDSDRIV_lm <- lm(TARGET_AMT ~ KIDSDRIV,data=lin_insi)
+AGE_lm <- lm(TARGET_AMT ~ AGE,data=lin_insi)
+HOMEKIDS_lm <- lm(TARGET_AMT ~ HOMEKIDS,data=lin_insi)
+YOJ_lm <- lm(TARGET_AMT ~ YOJ,data=lin_insi)
+INCOME_lm <- lm(TARGET_AMT ~ INCOME,data=lin_insi)
+TRAVTIME_lm <- lm(TARGET_AMT ~ TRAVTIME,data=lin_insi)
+BLUEBOOK_lm <- lm(TARGET_AMT ~ BLUEBOOK,data=lin_insi)
+TIF_lm <- lm(TARGET_AMT ~ TIF,data=lin_insi)
+OLDCLAIM_lm <- lm(TARGET_AMT ~ OLDCLAIM,data=lin_insi)
+CLM_FREQ_lm <- lm(TARGET_AMT ~ CLM_FREQ,data=lin_insi)
+MVR_PTS_lm <- lm(TARGET_AMT ~ MVR_PTS,data=lin_insi)
+CAR_AGE_lm <- lm(TARGET_AMT ~ CAR_AGE,data=lin_insi)
+blnPARENT1_lm <- lm(TARGET_AMT ~ blnPARENT1,data=lin_insi)
+blnMSTATUS_lm <- lm(TARGET_AMT ~ blnMSTATUS,data=lin_insi)
+blnSEX_lm <- lm(TARGET_AMT ~ blnSEX,data=lin_insi)
+blnCAR_USE_lm <- lm(TARGET_AMT ~ blnCAR_USE,data=lin_insi)
+blnNOT_RED_CAR_lm <- lm(TARGET_AMT ~ blnNOT_RED_CAR,data=lin_insi)
+blnNOT_REVOKED_lm <- lm(TARGET_AMT ~ blnNOT_REVOKED,data=lin_insi)
+blnURBANICITY_lm <- lm(TARGET_AMT ~ blnURBANICITY,data=lin_insi)
+intEDUCATION_lm <- lm(TARGET_AMT ~ intEDUCATION,data=lin_insi)
+intJOB_lm <- lm(TARGET_AMT ~ intJOB,data=lin_insi)
+intCAR_TYPE_lm <- lm(TARGET_AMT ~ intCAR_TYPE,data=lin_insi)
 
 models <- list(KIDSDRIV_lm, AGE_lm,HOMEKIDS_lm,YOJ_lm,INCOME_lm,
               TRAVTIME_lm,BLUEBOOK_lm,TIF_lm,OLDCLAIM_lm,CLM_FREQ_lm,
@@ -438,16 +435,9 @@ models <- list(KIDSDRIV_lm, AGE_lm,HOMEKIDS_lm,YOJ_lm,INCOME_lm,
               blnSEX_lm,blnCAR_USE_lm,blnNOT_RED_CAR_lm,blnNOT_REVOKED_lm,
               blnURBANICITY_lm,intEDUCATION_lm,intJOB_lm,intCAR_TYPE_lm)
 
-summary(BLUEBOOK_lm)
-plot(BLUEBOOK_lm)
-plot(train$BLUEBOOK,train$TARGET_AMT)
-abline(BLUEBOOK_lm)
 ```
 
-```{r}
-summary(INCOME_lm)$adj.r.squared
-variable.names(INCOME_lm)[2]
-```
+
 ```{r,echo=FALSE,eval=FALSE}
 #Creation of lists 
 var <- c()
@@ -474,8 +464,82 @@ data.frame(var,p_val,r2_val)
 
 One method of developing multiple regression models is to take a stepwise approach.  To accomplish this, we combine our knowledge from the data exploration above with logistic regression. Univariate Logistic Regression is a useful method to understand how each predictor variable interacts individually with the target (response) variable. Looking at various statistics, we determine which variable may impact our target the most.
   
-###Logistic Regression Models  
+###Linear Regression Models  
   
+```{r,echo=FALSE,warning=FALSE,eval=FALSE}
+lin_model <- subset(insi, TARGET_FLAG == 1)
+Var_lm <- c("TARGET_AMT","TARGET_FLAG","INCOME","TRAVTIME","BLUEBOOK","OLDCLAIM", "YOJ","intEDUCATION","intJOB","CAR_AGE")
+
+log_var <- c("TARGET_AMT","INCOME","BLUEBOOK","OLDCLAIM")
+
+log_lin_model <- lin_model[Var_lm]
+log_lin_model[log_var] <- log(log_lin_model[log_var])
+log_lin_model <- do.call(data.frame,lapply(log_lin_model, function(x) replace(x, is.infinite(x),0)))
+```
+
+```{r,echo=FALSE,eval=FALSE}
+model_ols <- lm(TARGET_AMT ~ INCOME + TRAVTIME + BLUEBOOK+
+                      OLDCLAIM + YOJ + intEDUCATION + intJOB + CAR_AGE, 
+                    data =lin_model)
+summary(model_ols)
+
+plot(fitted(model_ols), residuals(model_ols))
+
+wts <- 1/fitted(lm(abs(residuals(model_ols)) ~ fitted(model_ols)))^2
+
+length(wts)
+length(model_ols$residuals)
+model_wls <- lm(TARGET_AMT ~ INCOME + TRAVTIME + BLUEBOOK+
+                      OLDCLAIM + YOJ + intEDUCATION + intJOB + CAR_AGE, 
+                    data = lin_model, weights = wts)
+summary(model_wls)
+
+plot(fitted(model_wls), rstandard(model_wls))
+```
+
+
+
+```{r,echo=FALSE,eval=FALSE}
+log_model_ols <- lm(TARGET_AMT ~ INCOME + TRAVTIME + BLUEBOOK+
+                      OLDCLAIM + YOJ + intEDUCATION + intJOB + CAR_AGE, 
+                    data =log_lin_model)
+summary(log_model_ols)
+
+plot(fitted(log_model_ols), residuals(log_model_ols))
+
+wts <- 1/fitted(lm(abs(residuals(log_model_ols)) ~ fitted(log_model_ols)))^2
+
+length(wts)
+length(log_model_ols$residuals)
+log_model_wls <- lm(TARGET_AMT ~ INCOME + TRAVTIME + BLUEBOOK+
+                      OLDCLAIM + YOJ + intEDUCATION + intJOB + CAR_AGE, 
+                    data = log_lin_model, weights = wts)
+summary(log_model_wls)
+
+plot(fitted(log_model_wls), rstandard(log_model_wls))
+```
+
+```{r,echo=FALSE,eval=FALSE}
+backward <- step(model_wls)
+summary(backward)
+```
+
+
+
+### Model 1 
+
+As a baseline, we start with a multiple logistic regression model that includes every predictor variable:
+
+In this model-and in all the models- we set aside 20% of the training data and use 80% to train the model we then use the model to predict the outcome of the remaining 20% of the data.  The model yields an Area Under Curve of .95, meaning it chose correctly 95% of the time.
+
+
+### Model 2
+  
+In this scenario we attempt to create the simplest model possible by using only one variable - the one that provides the highest overall AUC (performance) by itself.  We calculate AUC for each variable separately and then select the highest result. 
+
+
+By combining three variables - *nox*, *rad* and *zn* - that is, the concentration of nitrogen oxides, access to radial highways and the proportion of land zoned for large lots, we can predict with 94% accuracy whether the crime rate at this property is above or below average.  Since this is very close to the performance of the model using all variables (95%), we can be confident in using these three variables for our decision support process, and disregarding the others. 
+
 ```{r,echo=FALSE,warning=FALSE}
 # build the data frame to be used for logistic regression modeling
 insi.log <- insi[,!(names(insi) %in% c("OLDCLAIM","TRAVTIME","BLUEBOOK","HOME_VAL"))]
@@ -491,22 +555,7 @@ train <- insi.log[train_ind, ]
 test <- insi.log[-train_ind, ]
 ```
 
-```{r,echo=FALSE,warning=FALSE,eval=FALSE}
-lin_model <- subset(insi, TARGET_FLAG == 1)
-Var_lm <- c("TARGET_AMT","TARGET_FLAG","INCOME","TRAVTIME","BLUEBOOK","OLDCLAIM", "YOJ","intEDUCATION","intJOB","CAR_AGE")
-
-log_var <- c("TARGET_AMT","INCOME","BLUEBOOK","OLDCLAIM")
-
-log_lin_model <- lin_model[Var_lm]
-log_lin_model[log_var] <- log(log_lin_model[log_var])
-log_lin_model <- do.call(data.frame,lapply(log_lin_model, function(x) replace(x, is.infinite(x),0)))
-```
-
 ```{r,echo=FALSE,eval=FALSE}
-log_model_ols <- lm(TARGET_AMT ~ INCOME + TRAVTIME + BLUEBOOK+
-                      OLDCLAIM + YOJ + intEDUCATION + intJOB + CAR_AGE, 
-                    data =log_lin_model)
-summary(log_model_ols)
 
 
 KIDSDRIV_model<- glm(TARGET_FLAG ~ KIDSDRIV,family=binomial(link='logit'),data=train)           
@@ -538,90 +587,31 @@ models <- list(KIDSDRIV_model,HOMEKIDS_model,AGE_model,blnPARENT1_model,logBLUEB
                blnNOT_REVOKED_model,blnURBANICITY_model,logTRAVTIME_model,logOLDCLAIM_model,
                logHOME_VAL_model)
 ```
-  
-```{r,echo=FALSE,warning=FALSE}
+
+```{r}
+
 #Creation of lists 
 var <- c()
 p_val <- c()
 aic <- c()
 auc <- c()
-
+  
 cols <- ncol(insi.log)
 #For loop to run variables over univarate glms
 for(i in models){
-  var <- c(var,variable.names(i)[2])
-  aic <- c(aic,i$aic)
-  p_val <- c(p_val,summary(i)$coef[2, "Pr(>|z|)"])
-  p <- predict(i, newdata=subset(test,select=c(3:cols)), type="response")
-  pr <- prediction(p, test$TARGET_FLAG)
-  prf <- performance(pr, measure = "tpr", x.measure = "fpr")
-  auc_perf<- performance(pr, measure = "auc")
-  auc_val <- auc_perf@y.values[[1]]
-  auc <- c(auc,auc_val)
-}
+    var <- c(var,variable.names(i)[2])
+    aic <- c(aic,i$aic)
+    p_val <- c(p_val,summary(i)$coef[2, "Pr(>|z|)"])
+    p <- predict(i, newdata=subset(test,select=c(3:cols)), type="response")
+    pr <- prediction(p, test$TARGET_FLAG)
+    prf <- performance(pr, measure = "tpr", x.measure = "fpr")
+    auc_perf<- performance(pr, measure = "auc")
+    auc_val <- auc_perf@y.values[[1]]
+    auc <- c(auc,auc_val)
+ }
+ 
 kable(data.frame(var,p_val,aic,auc))
-
-plot(fitted(log_model_ols), residuals(log_model_ols))
-
-wts <- 1/fitted(lm(abs(residuals(log_model_ols)) ~ fitted(log_model_ols)))^2
-
-length(wts)
-length(log_model_ols$residuals)
-log_model_wls <- lm(TARGET_AMT ~ INCOME + TRAVTIME + BLUEBOOK+
-                      OLDCLAIM + YOJ + intEDUCATION + intJOB + CAR_AGE, 
-                    data = log_lin_model, weights = wts)
-summary(log_model_wls)
-
-plot(fitted(log_model_wls), rstandard(log_model_wls))
 ```
-  
-  
-```{r,echo=FALSE,eval=FALSE}
-log_model_ols <- glm(TARGET_AMT ~ INCOME + TRAVTIME + BLUEBOOK+
-                      OLDCLAIM + YOJ + intEDUCATION + intJOB + CAR_AGE, 
-                      data =log_lin_model)
-summary(log_model_ols)
-
-plot(fitted(log_model_ols), residuals(log_model_ols))
-
-wts <- 1/fitted(lm(abs(residuals(log_model_ols)) ~ fitted(log_model_ols)))^2
-
-length(wts)
-length(log_model_ols$residuals)
-log_model_wls <- glm(TARGET_AMT ~ INCOME + TRAVTIME + BLUEBOOK+
-                      OLDCLAIM + YOJ + intEDUCATION + intJOB + CAR_AGE, 
-                    data = log_lin_model, weights = wts)
-summary(log_model_wls)
-
-plot(fitted(log_model_wls), rstandard(log_model_wls))
-```
-
-
-```{r,echo=FALSE,eval=FALSE}
-backward <- step(log_model_wls)
-summary(backward)
-```
-
-Here we see the selected output criteria for the linear models run with only a single predictor variable. We examine the p-value (significance), the AIC statistic (goodness-of-fit) and the AUC (Area Under Curve) to measure the potential predictive value of each variable, so we can decide whether or not to include it in our multiple regression model.  We are looking for p-values below .05, AIC values as low as possible, and AUC values as high as possible.
-
-From the above table, we can see that *chas* is the least likely to produce any meaningful inference because its p-value is well above .05 (not significant), it has the highest AIC (518, where 100 is considered excellent), and the lowest AUC (.54, where random chance would yield .50).  Therefore, *chas* is the most likely candidate to be removed from our model.  
-
-
-
-### Model 1 
-
-As a baseline, we start with a multiple logistic regression model that includes every predictor variable:
-
-In this model-and in all the models- we set aside 20% of the training data and use 80% to train the model we then use the model to predict the outcome of the remaining 20% of the data.  The model yields an Area Under Curve of .95, meaning it chose correctly 95% of the time.
-
-
-### Model 2
-  
-In this scenario we attempt to create the simplest model possible by using only one variable - the one that provides the highest overall AUC (performance) by itself.  We calculate AUC for each variable separately and then select the highest result. 
-
-
-By combining three variables - *nox*, *rad* and *zn* - that is, the concentration of nitrogen oxides, access to radial highways and the proportion of land zoned for large lots, we can predict with 94% accuracy whether the crime rate at this property is above or below average.  Since this is very close to the performance of the model using all variables (95%), we can be confident in using these three variables for our decision support process, and disregarding the others.  
-  
 
 
 #### MODEL 3 - Backward regression starting with all variables
@@ -682,25 +672,6 @@ kable(model_summary)
 
 ##Choose Model
 
-
-We like *Model 3 With Nox* the best because it eliminates some of the questionable variables - the ones with high skew and many outliers, also it eliminates the chas variable, which was shown earlier as being insignificant.  Ridding the model of these variables helps provide insurance against poor decisions that could arise, *even if they do not show up in the model.* 
-
-#### MODEL 3 WITH NOX VARIABLE USING FULL DATASETS
-```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
-# recreate the model using the same variables, but using the full dataset
-model_3 <- glm(target ~ zn+nox+age+dis+rad+tax+ptratio+black+medv,family=binomial(link='logit'),data=crime)
-summary(model_3)
-p <- predict(model_3, newdata=subset(crime_eval,select=c(1,4,6,7,8,9,10,11,13)), type="response")
-
-#predict.prob <- 1/exp(p)
-#predict.prob <- 1/(1+exp(-p))
-predict.prob <- p
-predict.result <- ifelse(predict.prob>=.50, 1, 0)
-
-crime_eval <- cbind(crime_eval,predict.prob,predict.result)
-kable(crime_eval[,-c(2,3,5,12)])
-
-```
 
 
 The Smooth Operators of R Fusion Have Struck Again.
