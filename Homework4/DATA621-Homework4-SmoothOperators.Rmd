@@ -348,8 +348,8 @@ The analysis of the distributions for these variables show varying degrees of sk
   
 For the logistic regression analysis, we would like to remove as much of the skewness as possible from the candidate predictor variables. A transformation analysis was performed and a log transformation of most of the skewed variables result in a near-normal distribution consequently, for the logistic regression model, we will use the log value of the following variables for the modeling: OLDCLAIM, BLUEBOOK, TRAVTIME, HOME_VAL.  
 
-The last step in the data exploration is to examine the correlation tables, to see if there is any potential correlations that will impact our models. The below table shows the a condense correlation table showing only the highest positive and negative correlations (in this case above 0.5 and below -.5)
-
+The last step in the data exploration is to examine the correlation tables, to see if there is any potential correlations that will impact our models. The below table shows the a condense correlation table showing only the highest positive and negative correlations (in this case above 0.5 and below -.5)  
+  
   
 ```{r,echo=FALSE,warning=FALSE}
 # build a correlation table to study the variable relationships
@@ -371,23 +371,23 @@ As you can see, certain variables are correlated, and they are values that we wo
 
 ##Data Preparation
 
-One means of data preparation we decided to do was to take the log of several of the valiables: 
+Here we do the log transformation of the variables identifed earlier with high skewness. One of the variables, OLDCLAIM, has such a distorted distribution that the log transformation will not be sufficient to make the variable a viable candidate for our model. For the OLDCLAIM variable, the difference between the median and the mean is so large we will not attempt to use the OLDCLAIM variable.   
+  
 ```{r,echo=FALSE,warning=FALSE}
 # perform the log transformation for the selected predictor variables and add to the data frame
 # no variables used in the log transform can have a value of 0
 
-OLDCLAIM.median <- mean(insi$OLDCLAIM)
 HOME_VAL.median <- median(insi$HOME_VAL)
 BLUEBOOK.median <- median(insi$BLUEBOOK)
 TRAVTIME.median <- median(insi$TRAVTIME)
 
-insi$OLDCLAIM[insi$OLDCLAIM<=0] <- OLDCLAIM.median
 insi$HOME_VAL[insi$HOME_VAL<=0] <- HOME_VAL.median
+insi$BLUEBOOK[insi$BLUEBOOK<=0] <- BLUEBOOK.median
+insi$TRAVTIME[insi$TRAVTIME<=0] <- TRAVTIME.median
 
-insi$logOLDCLAIM <- log(insi$OLDCLAIM)
-insi$logBLUEBOOK <- log(insi$BLUEBOOK)
-insi$logTRAVTIME <- log(insi$TRAVTIME)
-insi$logHOME_VAL <- log(insi$HOME_VAL)
+insi$BLUEBOOK <- log(insi$BLUEBOOK)
+insi$TRAVTIME <- log(insi$TRAVTIME)
+insi$HOME_VAL <- log(insi$HOME_VAL)
 ```
 
 
@@ -519,24 +519,22 @@ summary(backward)
 
 ### Logistic Regression Model 
 
-As a baseline, we start with a multiple logistic regression model that includes every predictor variable:
-
-In this model-and in all the models- we set aside 20% of the training data and use 80% to train the model we then use the model to predict the outcome of the remaining 20% of the data.  The model yields an Area Under Curve of .95, meaning it chose correctly 95% of the time.
+In this model-and in all the models- we set aside 20% of the training data and use 80% to train the model we then use the model to predict the outcome of the remaining 20% of the data.  
   
   
 ```{r,echo=FALSE,warning=FALSE}
 # build the data frame to be used for logistic regression modeling
-insi.log <- insi[,!(names(insi) %in% c("OLDCLAIM","TRAVTIME","BLUEBOOK","HOME_VAL"))]
+#insi.log <- insi[,!(names(insi) %in% c("OLDCLAIM","TRAVTIME","BLUEBOOK","HOME_VAL"))]
 
 ## 80% of the sample size
 set.seed(121)
-smp_size <- floor(0.80 * nrow(insi.log))
+smp_size <- floor(0.80 * nrow(insi))
 
 ## set the seed to make your partition reproductible
-train_ind <- sample(seq_len(nrow(insi.log)), size = smp_size)
+train_ind <- sample(seq_len(nrow(insi)), size = smp_size)
 
-train <- insi.log[train_ind, ]
-test <- insi.log[-train_ind, ]
+train <- insi[train_ind, ]
+test <- insi[-train_ind, ]
 ```
   
 In this scenario we attempt to create the simplest model possible by using only one variable - the one that provides the highest overall AUC (performance) by itself.  We calculate AUC for each variable separately and then select the highest result.  
@@ -548,15 +546,14 @@ KIDSDRIV_model<- glm(TARGET_FLAG ~ KIDSDRIV,family=binomial(link='logit'),data=t
 HOMEKIDS_model<- glm(TARGET_FLAG ~ HOMEKIDS,family=binomial(link='logit'),data=train)       
 AGE_model<- glm(TARGET_FLAG ~ AGE,family=binomial(link='logit'),data=train)        
 blnPARENT1_model<- glm(TARGET_FLAG ~ blnPARENT1,family=binomial(link='logit'),data=train)        
-logHOME_VAL_model<- glm(TARGET_FLAG ~ logHOME_VAL,family=binomial(link='logit'),data=train)          
-logBLUEBOOK_model<- glm(TARGET_FLAG ~ logBLUEBOOK,family=binomial(link='logit'),data=train)          
+HOME_VAL_model<- glm(TARGET_FLAG ~ HOME_VAL,family=binomial(link='logit'),data=train)          
+BLUEBOOK_model<- glm(TARGET_FLAG ~ BLUEBOOK,family=binomial(link='logit'),data=train)          
 INCOME_model<- glm(TARGET_FLAG ~ INCOME,family=binomial(link='logit'),data=train)            
 CAR_AGE_model<- glm(TARGET_FLAG ~ CAR_AGE,family=binomial(link='logit'),data=train)           
 intEDUCATION_model<- glm(TARGET_FLAG ~ intEDUCATION,family=binomial(link='logit'),data=train)            
 intJOB_model<- glm(TARGET_FLAG ~ intJOB,family=binomial(link='logit'),data=train)      
 blnMSTATUS_model<- glm(TARGET_FLAG ~ blnMSTATUS,family=binomial(link='logit'),data=train)       
 intCAR_TYPE_model<- glm(TARGET_FLAG ~ intCAR_TYPE,family=binomial(link='logit'),data=train)       
-logOLDCLAIM_model<- glm(TARGET_FLAG ~ logOLDCLAIM,family=binomial(link='logit'),data=train)       
 CLM_FREQ_model<- glm(TARGET_FLAG ~ CLM_FREQ,family=binomial(link='logit'),data=train)       
 TIF_model<- glm(TARGET_FLAG ~ TIF,family=binomial(link='logit'),data=train)       
 MVR_PTS_model<- glm(TARGET_FLAG ~ MVR_PTS,family=binomial(link='logit'),data=train)
@@ -565,13 +562,13 @@ blnCAR_USE_model<- glm(TARGET_FLAG ~ blnCAR_USE,family=binomial(link='logit'),da
 blnNOT_RED_CAR_model<- glm(TARGET_FLAG ~ blnNOT_RED_CAR,family=binomial(link='logit'),data=train)
 blnNOT_REVOKED_model<- glm(TARGET_FLAG ~ blnNOT_REVOKED,family=binomial(link='logit'),data=train)
 blnURBANICITY_model<- glm(TARGET_FLAG ~ blnURBANICITY,family=binomial(link='logit'),data=train)
-logTRAVTIME_model<- glm(TARGET_FLAG ~ logTRAVTIME,family=binomial(link='logit'),data=train)
+TRAVTIME_model<- glm(TARGET_FLAG ~ TRAVTIME,family=binomial(link='logit'),data=train)
 
-models <- list(KIDSDRIV_model,HOMEKIDS_model,AGE_model,blnPARENT1_model,logBLUEBOOK_model,INCOME_model,
+models <- list(KIDSDRIV_model,HOMEKIDS_model,AGE_model,blnPARENT1_model,BLUEBOOK_model,INCOME_model,
                CAR_AGE_model,intEDUCATION_model,intJOB_model,blnMSTATUS_model,intCAR_TYPE_model,
                CLM_FREQ_model,TIF_model,MVR_PTS_model,blnSEX_model,blnCAR_USE_model,blnNOT_RED_CAR_model,
-               blnNOT_REVOKED_model,blnURBANICITY_model,logTRAVTIME_model,logOLDCLAIM_model,
-               logHOME_VAL_model)
+               blnNOT_REVOKED_model,blnURBANICITY_model,TRAVTIME_model,
+               HOME_VAL_model)
 
 #Creation of lists 
 var <- c()
@@ -579,7 +576,7 @@ p_val <- c()
 aic <- c()
 auc <- c()
   
-cols <- ncol(insi.log)
+cols <- ncol(insi)
 #For loop to run variables over univarate glms
 for(i in models){
     var <- c(var,variable.names(i)[2])
@@ -596,16 +593,17 @@ for(i in models){
 # build a table of the model analysis results
 kable(data.frame(var,p_val,aic,auc))
 ```
-
-
+  
+We will derive our logistic regression model by stepping backward from using all candidate variables and arriving at the variable set that maximizes the AUC value.  
+  
 #### MODEL 1 - Backward regression starting with all variables
 ```{r,echo=FALSE,warning=FALSE}
 # Simple backward regression
-model_3 <- glm(TARGET_FLAG ~ .-TARGET_AMT,family=binomial(link='logit'),data=train)
-backward <- step(model_3)
-summary(backward)
+model_3 <- glm(TARGET_FLAG ~ .-TARGET_AMT-OLDCLAIM,family=binomial(link='logit'),data=train)
+model_3_backward <- step(model_3)
+summary(model_3_backward)
 
-p <- predict(backward, newdata=subset(test,select=c(3:cols)), type="response")
+p <- predict(model_3_backward, newdata=subset(test,select=c(3:cols)), type="response")
 pr <- prediction(p, test$TARGET_FLAG)
 prf <- performance(pr, measure = "tpr", x.measure = "fpr")
 plot(prf)
@@ -621,12 +619,10 @@ m3_prediction <- ifelse(p > 0.5, 1, 0)
 confusion_m3 <- confusionMatrix(data = m3_prediction, reference = test[,1])
 confusion_m3$table
 ```
-
-The model reduces to nine variables and yields a nice low residual deviance of 133.9, compared to a null deviance of 515.3.  This roughly means that the model eliminates about 80% of the error compared to choosing at random.  The AUC is .947 which is roughly the same as the full model using all variables.  
-
-
-
-Below is table illustrating the various fitness parameters that describe the effectiveness of the models.  All the models are good - from a practical perspective, there is no difference between them.  
+  
+Our derived logistic regression model has a maximize AUC value of .79 with great p-values on all of the selected variables.  
+  
+Below is table illustrating the various fitness parameters that describe the effectiveness of the logistic regression model.  All the models are good - from a practical perspective, there is no difference between them.  
 
 ```{r,echo=FALSE,warning=FALSE}
 # function to calculate the F1 score
@@ -697,28 +693,32 @@ mice.ic <- complete(mice.i,1)
 
 eval_copy <- subset(mice.ic, select = c("TARGET_FLAG", "TARGET_AMT", "KIDSDRIV", "AGE", "HOMEKIDS", "YOJ", "INCOME", "HOME_VAL", "TRAVTIME", "BLUEBOOK", "TIF", "OLDCLAIM", "CLM_FREQ", "MVR_PTS", "CAR_AGE", "blnPARENT1", "blnMSTATUS", "blnSEX", "blnCAR_USE", "blnNOT_RED_CAR", "blnNOT_REVOKED", "blnURBANICITY", "intEDUCATION", "intJOB", "intCAR_TYPE"))
 
-OLDCLAIM.median <- mean(eval_copy$OLDCLAIM)
-HOME_VAL.median <- median(eval_copy$HOME_VAL)
-BLUEBOOK.median <- median(eval_copy$BLUEBOOK)
-TRAVTIME.median <- median(eval_copy$TRAVTIME)
-
-eval_copy$OLDCLAIM[eval_copy$OLDCLAIM <= 0] <- OLDCLAIM.median
-eval_copy$HOME_VAL[eval_copy$HOME_VAL <= 0] <- HOME_VAL.median
-
-eval_copy$logOLDCLAIM <- log(eval_copy$OLDCLAIM)
-eval_copy$logBLUEBOOK <- log(eval_copy$BLUEBOOK)
-eval_copy$logTRAVTIME <- log(eval_copy$TRAVTIME)
-eval_copy$logHOME_VAL <- log(eval_copy$HOME_VAL)
 ```
 
 
 ```{r, echo=FALSE, warning=FALSE}
-# Built the model using the train dataset. Then we save the results under TARGET_FLAG in eval dataset.
-model_3 <- glm(TARGET_FLAG ~ KIDSDRIV + INCOME + TIF + CLM_FREQ + MVR_PTS + blnPARENT1 + blnMSTATUS + blnCAR_USE + blnNOT_REVOKED + blnURBANICITY + intEDUCATION + intJOB + intCAR_TYPE + logOLDCLAIM + logBLUEBOOK + logTRAVTIME + logHOME_VAL, family = binomial(link='logit'), data = train)
-summary(model_3)
+# Perform log transformation on the previously identified variables
+HOME_VAL.median <- median(eval_copy$HOME_VAL)
+BLUEBOOK.median <- median(eval_copy$BLUEBOOK)
+TRAVTIME.median <- median(eval_copy$TRAVTIME)
 
-p <- predict(model_3, newdata = eval_copy, type = "response")
+eval_copy$HOME_VAL[eval_copy$HOME_VAL<=0] <- HOME_VAL.median
+eval_copy$BLUEBOOK[eval_copy$BLUEBOOK<=0] <- BLUEBOOK.median
+eval_copy$TRAVTIME[eval_copy$TRAVTIME<=0] <- TRAVTIME.median
+
+eval_copy$BLUEBOOK <- log(eval_copy$BLUEBOOK)
+eval_copy$TRAVTIME <- log(eval_copy$TRAVTIME)
+eval_copy$HOME_VAL <- log(eval_copy$HOME_VAL)
+
+# Built the model using the train dataset. Then we save the results under TARGET_FLAG in eval dataset.
+# use the backward step model created earlier so comment this code out eve though it's equivalent
+#model_3 <- glm(TARGET_FLAG ~ KIDSDRIV + INCOME + TIF + CLM_FREQ + MVR_PTS + blnPARENT1 + blnMSTATUS + blnCAR_USE + blnNOT_REVOKED + blnURBANICITY + intEDUCATION + intJOB + intCAR_TYPE + BLUEBOOK + TRAVTIME + HOME_VAL, family = binomial(link='logit'), data = train)
+#summary(model_3)
+
+p <- predict(model_3_backward, newdata=eval_copy, type = "response")
+
 eval_copy$TARGET_FLAG <- ifelse(p >= .50, 1, 0)
+
 ```
 
 
