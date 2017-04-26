@@ -1,11 +1,11 @@
 ---
 title: "DATA621-Homework4-SmoothOperators"
 author: "Rob Hodde, Matt Farris, Jeffrey Burmood, Bin Lin"
-date: "4/10/2017"
-output:  pdf_document
-  
-  
---------  
+date: "4/17/2017"
+output:
+  pdf_document: default
+  html_document: default
+---  
   
 ###Problem Description
 
@@ -13,7 +13,7 @@ The objective is to build multiple linear regression and binary logistic regress
   
 Each record has two response variables. The first response variable, TARGET_FLAG, is a 1 or a 0. A "1" means that the person was in a car crash. A zero means that the person was not in a car crash. The second response variable is TARGET_AMT. This value is zero if the person did not crash their car. But if they did crash their car, this number will be a value greater than zero.  
 
-Using the training data set, evaluate the multiple linear regression model based on (a) mean squared error, (b) R2, (c) F-statistic, and (d) residual plots. For the binary logistic regression model, will use a metric such as log likelihood, AIC, ROC curve, etc.? Using the training data set, evaluate the binary logistic regression model based on (a) accuracy, (b) classification error rate, (c) precision, (d) sensitivity, (e) specificity, (f) F1 score, (g) AUC, and (h) confusion matrix. Make predictions using the evaluation data set.  
+Using the training data set, evaluate the multiple linear regression model based on (a) mean squared error, (b) R2, (c) F-statistic, and (d) residual plots. For the binary logistic regression model, will use a metric such as log likelihood, AIC, or ROC curve.  Using the training data set, evaluate the binary logistic regression model based on (a) accuracy, (b) classification error rate, (c) precision, (d) sensitivity, (e) specificity, (f) F1 score, (g) AUC, and (h) confusion matrix. Make predictions using the evaluation data set.  
   
 Approach Steps:
   
@@ -30,39 +30,45 @@ Approach Steps:
 {\huge Data Exploration}
 \end{center}
 
---------
+---
 
 ##Data Exploration
 
 
-```{r,include=FALSE,warning=FALSE}
+```{r,echo=FALSE,include=FALSE}
 # Load required libraries
-library(ggplot2)
-library(ROCR)
-library(RCurl)
-library(knitr)
-library(Hmisc)
-library(caret)
-library(stringr)
-##library(Amelia)
-##library(Hmisc)
-##library(mi)
-library(mice)
-
+suppressWarnings(suppressMessages(library(ggplot2)))
+suppressWarnings(suppressMessages(library(ROCR)))
+suppressWarnings(suppressMessages(library(RCurl)))
+suppressWarnings(suppressMessages(library(knitr)))
+suppressWarnings(suppressMessages(library(Hmisc)))
+suppressWarnings(suppressMessages(library(caret)))
+suppressWarnings(suppressMessages(library(stringr)))
+suppressWarnings(suppressMessages(library(mice)))
+suppressWarnings(suppressMessages(library(dplyr)))
+suppressWarnings(suppressMessages(library(reshape2)))
 #
 # Read in the dataset from github
 ins <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/master/Homework4/data/insurance_training_data.csv"),header=TRUE,na.strings=c(""," "), stringsAsFactors = FALSE)
 ins_eval <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/master/Homework4/data/insurance-evaluation-data.csv"),header=TRUE,na.strings=c(""," "), stringsAsFactors = FALSE)
-
 ```
   
-![](./VariableDescription.png)
+  
+The first steps in our process was to explore our data. During this exploration, we immediately noticed the presence of inconsistent data, which is why we employed the use of the MICE package to provide weighted mean data to any missing values. 
 
-```{r}
+
+Our next step was to change the categorical data into numeric values, which was accomplished using the following legend:
+
+![](https://raw.githubusercontent.com/jeffreyburmood/data621/master/Homework4/New_Variables.png)
+
+After that, we repaired the offending values, standardized the data types, and add new variables to quantitatively represent the binary and categorical choices available in the data:
+
+
+```{r,echo=FALSE,warning=FALSE}
 
 #DATA CLEANSING
 
-#FUNCTIONS
+#FUNCTIONS---------------
 #convert character values to numeric 
 sToNum <- function(a){
   a <- gsub("[$]","", a)
@@ -95,8 +101,6 @@ sToBLN_Reverse <- function(a){
   a <- as.numeric(a)
   return(a)
 }
-
-
 
 #MAKE A COPY OF THE IMPORTED TRAINING DATA FRAME
 insc <- ins 
@@ -141,54 +145,25 @@ insc$intJOB <- job$intJOB[match(insc$JOB, job$JOB)]
 typ <- data.frame(CAR_TYPE = c("Sports Car","SUV","Pickup","Minivan","Van","Panel Truck"), intCAR_TYPE = c(1,2,3,4,5,6)) 
 insc$intCAR_TYPE <- typ$intCAR_TYPE[match(insc$CAR_TYPE, typ$CAR_TYPE)]
 
-summary(insc) #Show the new attributes and corrections
-
-
-
-#IMPUTE missing values
-
-#Amelia PACKAGE:
-#first we must make a dataframe with numeric-only fields
-#insi <- subset(insc,select = c("INDEX", "TARGET_FLAG", "TARGET_AMT", "KIDSDRIV", "AGE", "HOMEKIDS", "YOJ", "INCOME", "HOME_VAL", "TRAVTIME", "BLUEBOOK", "TIF", "OLDCLAIM", "CLM_FREQ", "MVR_PTS", "CAR_AGE", "blnPARENT1", "blnMSTATUS", "blnSEX", "blnCAR_USE", "blnNOT_RED_CAR", "blnNOT_REVOKED", "blnURBANICITY", "intEDUCATION", "intJOB", "intCAR_TYPE"))
-#summary(insi)
-#a.ins <- amelia(insi, m = 1, ts = "INDEX", cs = "TARGET_AMT")
-#a.ins$imputations$imp1
-#a.i <- a.ins$imputations$imp1 
-#head(a.i)
-#summary(a.i)
-#turns out, can't use the Amelia II package to create the imputations because it can't handle non-normal distributions
-
-# MI PACKAGE
-#mi.i <- mi(insc, seed = 335)
-#summary(mi.i)
-#head(mi.i)
-#mi.i
-#conclusion: i dont understand the output of the mi package
-
-# Hmisc PACKAGE
-#we must declare which variables have missing values
-#hmisc.i <- aregImpute(formula = ~ AGE + YOJ + HOME_VAL + JOB + INCOME + CAR_AGE, data = insc, n.impute = 5)
-#hmisc.i
-#note the R-squares are very low (poor) for Age, Years on Job, Home Valuation and Car Age.
-#hmisc.i$imputed$AGE #look at imputed values for one variable
-#conclusion: good values, but how to copy the imputed values back to the original dataframe?  transcan?  google says use MICE instead
+#summary(insc) #Show the new attributes and corrections
 
 #mice PACKAGE
 #uses Predictive Mean Matching. 
 mice.i <- mice(insc, m = 3, print=F)
 mice.ic <- complete(mice.i,1)
-head(mice.ic)
-summary(mice.ic)  #  <---- USE mice.ic DATA FRAME for modeling with imputed data  ***
-#conclusion: the imputed values are above zero.  wish I could see methods, R-Squares 
 
+insi <- subset(mice.ic,select = c("INDEX", "TARGET_FLAG", "TARGET_AMT", "KIDSDRIV", "AGE", "HOMEKIDS", "YOJ", "INCOME", "HOME_VAL", "TRAVTIME", "BLUEBOOK", "TIF", "OLDCLAIM", "CLM_FREQ", "MVR_PTS", "CAR_AGE", "blnPARENT1", "blnMSTATUS", "blnSEX", "blnCAR_USE", "blnNOT_RED_CAR", "blnNOT_REVOKED", "blnURBANICITY", "intEDUCATION", "intJOB", "intCAR_TYPE"))
 
+#head(insi)
+#summary(insi)  #  <---- USE insi DATA FRAME for modeling with imputed data  ***
+#conclusion: the imputed values are above zero.  
 
+#now we must make a dataframe with numeric-only fields
+insi <- subset(mice.ic,select = c("INDEX", "TARGET_FLAG", "TARGET_AMT", "KIDSDRIV", "AGE", "HOMEKIDS", "YOJ", "INCOME", "HOME_VAL", "TRAVTIME", "BLUEBOOK", "TIF", "OLDCLAIM", "CLM_FREQ", "MVR_PTS", "CAR_AGE", "blnPARENT1", "blnMSTATUS", "blnSEX", "blnCAR_USE", "blnNOT_RED_CAR", "blnNOT_REVOKED", "blnURBANICITY", "intEDUCATION", "intJOB", "intCAR_TYPE"))
 
-
-
+#head(insi)
+#insi2 <- insi
 ```
-
-
 
 
 Below is a summary of each predictor variable's basic statistics, followed by boxplots which illustrate the spread and outliers for each variable.    
@@ -196,167 +171,199 @@ Below is a summary of each predictor variable's basic statistics, followed by bo
 
 ```{r,echo=FALSE,warning=FALSE}
 # First, remove the INDEX variable column since it's not used
-mice.ic <- mice.ic[2:length(mice.ic)]
+insi <- insi[2:length(insi)]
 # Next, get a general look at the data
 # Let's start by exploring the type of each variable
-types <- sapply(1:length(mice.ic),function(x) typeof(mice.ic[,x]))
-types.df <- data.frame(VAR=names(mice.ic),TYPE=types)
+types <- sapply(1:length(insi),function(x) typeof(insi[,x]))
+types.df <- data.frame(VAR=names(insi),TYPE=types)
 kable(types.df)
 
 # Now generate some summary statistics
-kable(summary(mice.ic[1:6]))
-kable(summary(mice.ic[7:12]))
-kable(summary(mice.ic[13:18]))
-kable(summary(mice.ic[19:24]))
-kable(summary(mice.ic[25:30]))
-kable(summary(mice.ic[31:length(mice.ic)]))
-# Visual check for obvious correlations
-#pairs(mice.ic,col=mice.ic$TARGET_FLAG)
-#
-# no NAs found so no missing values to remove or fix
-#
+kable(summary(insi[1:6]))
+kable(summary(insi[7:12]))
+kable(summary(insi[13:18]))
+kable(summary(insi[19:21]))
+kable(summary(insi[22:length(insi)]))
 # Look over the variables checking for outliers/influential points, correlation between variables, etc. using box plots.
 #
 # set the plot-page configuration
 
 ```
 
-```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3}
 par(mfcol=c(1,3))
-boxplot(mice.ic$KIDSDRIV, main="KIDSDRIV")
-boxplot(mice.ic$AGE, main="AGE")
-boxplot(mice.ic$HOMEKIDS, main="HOMEKIDS")
+boxplot(insi$KIDSDRIV, main="KIDSDRIV")
+boxplot(insi$AGE, main="AGE")
+boxplot(insi$HOMEKIDS, main="HOMEKIDS")
 ```
 
-```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3}
 par(mfcol=c(1,3))
-boxplot(mice.ic$YOJ, main="YOJ")
-boxplot(mice.ic$HOME_VAL, main="HOME_VAL")
-boxplot(mice.ic$intEDUCATION, main="EDUCATION")
+boxplot(insi$YOJ, main="YOJ")
+boxplot(insi$HOME_VAL, main="HOME_VAL")
+boxplot(insi$intEDUCATION, main="EDUCATION")
 ```
 
-```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3}
 par(mfcol=c(1,3))
-boxplot(mice.ic$intJOB, main="JOB")
-boxplot(mice.ic$INCOME, main="INCOME")
-boxplot(mice.ic$TRAVTIME, main="TRAVTIME")
+boxplot(insi$intJOB, main="JOB")
+boxplot(insi$INCOME, main="INCOME")
+boxplot(insi$TRAVTIME, main="TRAVTIME")
 ```
 
-```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3}
 par(mfcol=c(1,3))
-boxplot(mice.ic$TIF, main="TIF")
-boxplot(mice.ic$intCAR_TYPE, main="CAR_TYPE")
-boxplot(mice.ic$BLUEBOOK, main="BLUEBOOK")
+boxplot(insi$TIF, main="TIF")
+boxplot(insi$intCAR_TYPE, main="CAR_TYPE")
+boxplot(insi$BLUEBOOK, main="BLUEBOOK")
 ```
 
-```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3}
 par(mfcol=c(1,3))
-boxplot(mice.ic$OLDCLAIM, main="OLDCLAIM")
-boxplot(mice.ic$CLM_FREQ, main="CLM_FREQ")
-boxplot(mice.ic$MVR_PTS, main="MVR_PTS")
+boxplot(insi$OLDCLAIM, main="OLDCLAIM")
+boxplot(insi$CLM_FREQ, main="CLM_FREQ")
+boxplot(insi$MVR_PTS, main="MVR_PTS")
 ```
 
-```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+```{r,echo=FALSE,warning=FALSE,fig.height = 3}
 par(mfcol=c(1,3))
-boxplot(mice.ic$CAR_AGE, main="CAR_AGE")
+boxplot(insi$CAR_AGE, main="CAR_AGE")
 ```
 
 
+Below is a correlation table illustrating the collinearity of each variable to the others.  
 
+   
+```{r,echo=FALSE,warning=FALSE}
+# Lastly, build a correlation table to identify any relationships between the predictor variables
+# get a table of only predictor variables
+insi.pred <- subset(insi,select=-c(TARGET_FLAG,TARGET_AMT))
+
+cor.table <- cor(insi.pred) # build a table of inter-variable correlation values
+kable(cor.table[,1:6])
+kable(cor.table[,7:12])
+kable(cor.table[,13:18])
+```
+  
+Here are the results from an analysis of the predictor variable correlations:  
+  
+The are no strong correlations (>70%) between predictor variables, not enough to allow consideration of removing a variable from the model based on a high correlation with another variable. There is some moderate correlation (30-50%) between some variable highlighting obvious relationships such as HOMEKIDS-KIDSDRIV, HOME_VAL-INCOME, EDUCATION-INCOME, JOB-INCOME, CAR_TYPE-BLUEBOOK, CLM_FREQ-OLDCLAIM, and MVR_PTS-CLM_FREQ.  
 
 
 Based on an analysis of the box plots, the following variables have some outliers that may, or may not, exert influence on the regression results: 
-    - KIDSDRIV, HOME_VAL, TRAVTIME, MVR_PTS  
+    - KIDSDRIV, HOME_VAL, TRAVTIME, MVR_PTS, AGE, INCOME, BLUEBOOK, OLDCLAIM  
   
 We'll next look at these variables more closely, starting with their histograms and frequency counts to better understand the nature of their distribution.  
 
-```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3}
 # KIDSDRIV
-m <- mean(mice.ic$KIDSDRIV)
-s <- sd(mice.ic$KIDSDRIV)
+m <- mean(insi$KIDSDRIV)
+s <- sd(insi$KIDSDRIV)
 par(mfcol=c(1,3))
-hist(mice.ic$KIDSDRIV,prob=TRUE,xlab="KIDSDRIV",main='')
+hist(insi$KIDSDRIV,prob=TRUE,xlab="KIDSDRIV",main='')
 curve(dnorm(x,mean=m,sd=s),col="darkblue",lwd=2,add=TRUE)
 # zn is so skewed, let's look at a frequency count
-plot(table(mice.ic$KIDSDRIV))
+plot(table(insi$KIDSDRIV))
 # let's look at a plot of the values
-plot(mice.ic$KIDSDRIV)
+plot(insi$KIDSDRIV)
 
 ```  
 
-```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3}
 # HOME_VAL
-m <- mean(mice.ic$HOME_VAL)
-s <- sd(mice.ic$HOME_VAL)
+m <- mean(insi$HOME_VAL)
+s <- sd(insi$HOME_VAL)
 par(mfcol=c(1,3))
-hist(mice.ic$HOME_VAL,prob=TRUE,xlab="HOME_VAL",main='')
+hist(insi$HOME_VAL,prob=TRUE,xlab="HOME_VAL",main='')
 curve(dnorm(x,mean=m,sd=s),col="darkblue",lwd=2,add=TRUE)
 #let's look at a frequency count
-plot(table(mice.ic$HOME_VAL))
+plot(table(insi$HOME_VAL))
 # let's look at a plot of the values
-plot(mice.ic$HOME_VAL)
+plot(insi$HOME_VAL)
 ```  
 
-```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3}
 # MVR_PTS
-m <- mean(mice.ic$MVR_PTS)
-s <- sd(mice.ic$MVR_PTS)
+m <- mean(insi$MVR_PTS)
+s <- sd(insi$MVR_PTS)
 par(mfcol=c(1,3))
-hist(mice.ic$MVR_PTS,prob=TRUE,xlab="DIS",main='')
+hist(insi$MVR_PTS,prob=TRUE,xlab="MVR_PTS",main='')
 curve(dnorm(x,mean=m,sd=s),col="darkblue",lwd=2,add=TRUE)
 #let's look at a frequency count
-plot(table(mice.ic$MVR_PTS))
+plot(table(insi$MVR_PTS))
 # let's look at a plot of the values
-plot(mice.ic$MVR_PTS)
+plot(insi$MVR_PTS)
 ```  
 
-```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3}
 # TRAVTIME
-m <- mean(mice.ic$TRAVTIME)
-s <- sd(mice.ic$TRAVTIME)
+m <- mean(insi$TRAVTIME)
+s <- sd(insi$TRAVTIME)
 par(mfcol=c(1,3))
-hist(mice.ic$TRAVTIME,prob=TRUE,xlab="BLACK",main='')
+hist(insi$TRAVTIME,prob=TRUE,xlab="TRAVTIME",main='')
 curve(dnorm(x,mean=m,sd=s),col="darkblue",lwd=2,add=TRUE)
-# black is so skewed, let's look at a frequency count
-plot(table(mice.ic$TRAVTIME))
+# TRAVTIME is so skewed, let's look at a frequency count
+plot(table(insi$TRAVTIME))
 # let's look at a plot of the values
-plot(mice.ic$TRAVTIME)
+plot(insi$TRAVTIME)
 ```  
 
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3}
+# AGE
+m <- mean(insi$AGE)
+s <- sd(insi$AGE)
+par(mfcol=c(1,3))
+hist(insi$AGE,prob=TRUE,xlab="AGE",main='')
+curve(dnorm(x,mean=m,sd=s),col="darkblue",lwd=2,add=TRUE)
+# AGE is so skewed, let's look at a frequency count
+plot(table(insi$AGE))
+# let's look at a plot of the values
+plot(insi$AGE)
 ```  
-
-
-
-
-
-
-
-
-```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
-
-
-# quick look at model with all variables
-crime.model <- glm(target ~ .,family=binomial(link='logit'),data=crime)
-
-```
   
-According to the description, the variables *zn*, *indus*, and *age* are area, or land, proportions. According to the statistical summary, the values for these variables are all within the range [1,100] that we would expect.  
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3}
+# INCOME
+m <- mean(insi$INCOME)
+s <- sd(insi$INCOME)
+par(mfcol=c(1,3))
+hist(insi$INCOME,prob=TRUE,xlab="INCOME",main='')
+curve(dnorm(x,mean=m,sd=s),col="darkblue",lwd=2,add=TRUE)
+# INCOME is so skewed, let's look at a frequency count
+plot(table(insi$INCOME))
+# let's look at a plot of the values
+plot(insi$INCOME)
+```  
   
-Based on our detailed review of the variables that contained outliers, the following variables could be problematic:  
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3}
+# BLUEBOOK
+m <- mean(insi$BLUEBOOK)
+s <- sd(insi$BLUEBOOK)
+par(mfcol=c(1,3))
+hist(insi$BLUEBOOK,prob=TRUE,xlab="BLUEBOOK",main='')
+curve(dnorm(x,mean=m,sd=s),col="darkblue",lwd=2,add=TRUE)
+# BLUEBOOK is so skewed, let's look at a frequency count
+plot(table(insi$BLUEBOOK))
+# let's look at a plot of the values
+plot(insi$BLUEBOOK)
+```  
   
-The predictor variable *zn* is highly right skewed, we can confirm this by comparing the median and mean where the median is 0.0, but the mean is 11.58. The frequency count plot shows how poor the distribution is due to clustering of the data at one extreme.  
+```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3}
+# OLDCLAIM
+m <- mean(insi$OLDCLAIM)
+s <- sd(insi$OLDCLAIM)
+par(mfcol=c(1,3))
+hist(insi$OLDCLAIM,prob=TRUE,xlab="OLDCLAIM",main='')
+curve(dnorm(x,mean=m,sd=s),col="darkblue",lwd=2,add=TRUE)
+# OLDCLAIM is so skewed, let's look at a frequency count
+plot(table(insi$OLDCLAIM))
+# let's look at a plot of the values
+plot(insi$OLDCLAIM)
+```  
   
-The predictor variable *black* is highly left skewed. We can confirm this by comparing the median and mean where the median is 391.34 and the mean is 357.12. The frequency count plot shows how poor the distribution is due to clustering of the data at one extreme.  
   
-The predictor variable *dis* is slightly right skewed. We can confirm this by comparing the median and mean where the median is 3.191 and the mean is 3.796.  
+The analysis of the distributions for these variables show varying degrees of skewness, except for the AGE variable, which shows a fairly normal distribution.  
   
-Fortunately, no missing data, or NAs, were found.  
-  
-The following data corrections were identified in this section:  
-  
-(1) The predictor variable *chas* and the response variable *target* are categorical (binary), so we need to convert them to factors.  
-  
-(2) Need to determine if there are other variables highly coorelated with the *zn* or *black* variables that do not have the severe skew and outliers. This could allow us to remove the *zn* or *black* variables from the model.  
+For the logistic regression analysis, we would like to remove as much of the skewness as possible from the candidate predictor variables. A transformation analysis was performed and a log transformation of most of the skewed variables result in a near-normal distribution consequently, for the logistic regression model, we will use the log value of the following variables for the modeling: OLDCLAIM, BLUEBOOK, TRAVTIME, HOME_VAL.  
 
 
 \begin{center}
@@ -367,265 +374,151 @@ The following data corrections were identified in this section:
 
 ##Data Preparation
 
+As stated earlier, most of preparation was done prior to a thorough exploration. The reason being, is that the missing value was such a hinderance to proper exploration.
 
-The variable changes we identified so far include converting the predictor variable *chas* and the response variable *target* to factors.  Next we will look at how each variable correlates to all the others:  
+Here we perform the log transformation of the variables identifed earlier with high skewness. One of the variables, OLDCLAIM, has such a distorted distribution that the log transformation will not be sufficient to make the variable a viable candidate for our model. For the OLDCLAIM variable, the difference between the median and the mean is so large we will not attempt to use the OLDCLAIM variable.
 
   
-```{r,echo=FALSE,warning=FALSE,eval=FALSE}
-# Based on the data exploration results, identify any changes, transformations, and new or deleted variables to use for the next step of building the models.
-# Need to set variables to a factor as required
-crime$target <- as.factor(crime$target)
-crime$chas <- as.factor(crime$chas)
-crime_eval$chas <- as.factor(crime_eval$chas)
+```{r}
+# perform the log transformation for the selected predictor variables and add to the data frame
+# no variables used in the log transform can have a value of 0
 
-# get a table of non-factor variables
-crime.nofactor <- subset(crime,select=-c(chas,target))
-# build a correlation table to study the variable relationships
-cor.table <- cor(crime.nofactor) # build a table of inter-variable correlation values
-kable(cor.table[,1:6])
-kable(cor.table[,7:12])
+HOME_VAL.median <- median(insi$HOME_VAL)
+BLUEBOOK.median <- median(insi$BLUEBOOK)
+TRAVTIME.median <- median(insi$TRAVTIME)
+
+insi$HOME_VAL[insi$HOME_VAL<=0] <- HOME_VAL.median
+insi$BLUEBOOK[insi$BLUEBOOK<=0] <- BLUEBOOK.median
+insi$TRAVTIME[insi$TRAVTIME<=0] <- TRAVTIME.median
+
+insi$BLUEBOOK <- log(insi$BLUEBOOK)
+insi$TRAVTIME <- log(insi$TRAVTIME)
+insi$HOME_VAL <- log(insi$HOME_VAL)
 ```
-  
-The correlation table above shows that the variable *zn* is moderately correlated to the variable *dis*. The plot of the *dis* data shows a much better distribution of values. Consequently, one possibility is to remove *zn* from the model and use *dis* instead.  Before doing this, we should look at the real-world context of the two variables to determine if they are meaningfully related.
 
 
 \begin{center}
 {\huge Build Models}
 \end{center}
 
---------
 
 ##Build Models
 
 One method of developing multiple regression models is to take a stepwise approach.  To accomplish this, we combine our knowledge from the data exploration above with logistic regression. Univariate Logistic Regression is a useful method to understand how each predictor variable interacts individually with the target (response) variable. Looking at various statistics, we determine which variable may impact our target the most.
+  
+### Logistic Regression Model 
 
-```{r,echo=FALSE,warning=FALSE,eval=FALSE}
+In this model-and in all the models- we set aside 20% of the training data and use 80% to train the model we then use the model to predict the outcome of the remaining 20% of the data.  
+  
+  
+```{r,echo=FALSE,warning=FALSE}
+# build the data frame to be used for logistic regression modeling
+#insi.log <- insi[,!(names(insi) %in% c("OLDCLAIM","TRAVTIME","BLUEBOOK","HOME_VAL"))]
+
 ## 80% of the sample size
 set.seed(121)
-smp_size <- floor(0.80 * nrow(crime))
+smp_size <- floor(0.80 * nrow(insi))
 
 ## set the seed to make your partition reproductible
-train_ind <- sample(seq_len(nrow(crime)), size = smp_size)
+train_ind <- sample(seq_len(nrow(insi)), size = smp_size)
 
-train <- crime[train_ind, ]
-test <- crime[-train_ind, ]
-
-# quick look at model with all variables
-
-zn_uni_model<- glm(target ~ zn,family=binomial(link='logit'),data=train)           
-indus_uni_model<- glm(target ~ indus,family=binomial(link='logit'),data=train)       
-chas_uni_model<- glm(target ~ chas,family=binomial(link='logit'),data=train)        
-nox_uni_model<- glm(target ~ nox,family=binomial(link='logit'),data=train)        
-rm_uni_model<- glm(target ~ rm,family=binomial(link='logit'),data=train)          
-age_uni_model<- glm(target ~ age,family=binomial(link='logit'),data=train)          
-dis_uni_model<- glm(target ~ dis,family=binomial(link='logit'),data=train)            
-rad_uni_model<- glm(target ~ rad,family=binomial(link='logit'),data=train)           
-tax_uni_model<- glm(target ~ tax,family=binomial(link='logit'),data=train)            
-ptratio_uni_model<- glm(target ~ ptratio,family=binomial(link='logit'),data=train)      
-black_uni_model<- glm(target ~ black,family=binomial(link='logit'),data=train)       
-lstat_uni_model<- glm(target ~ lstat,family=binomial(link='logit'),data=train)       
-
-
-models <- list(zn_uni_model,indus_uni_model,
-            chas_uni_model,nox_uni_model,
-            rm_uni_model,age_uni_model,
-            dis_uni_model,rad_uni_model,
-            tax_uni_model,ptratio_uni_model,
-            black_uni_model,lstat_uni_model)
-
+train <- insi[train_ind, ]
+test <- insi[-train_ind, ]
 ```
+
   
-```{r,echo=FALSE,eval=FALSE}
+In this scenario we attempt to create the simplest model possible by using only one variable - the one that provides the highest overall AUC (performance) by itself.  We calculate AUC for each variable separately and then select the highest result.  
+  
+```{r,echo=FALSE,warning=FALSE}
+# build single variable models for analysis
+
+KIDSDRIV_model<- glm(TARGET_FLAG ~ KIDSDRIV,family=binomial(link='logit'),data=train)           
+HOMEKIDS_model<- glm(TARGET_FLAG ~ HOMEKIDS,family=binomial(link='logit'),data=train)       
+AGE_model<- glm(TARGET_FLAG ~ AGE,family=binomial(link='logit'),data=train)        
+blnPARENT1_model<- glm(TARGET_FLAG ~ blnPARENT1,family=binomial(link='logit'),data=train)        
+HOME_VAL_model<- glm(TARGET_FLAG ~ HOME_VAL,family=binomial(link='logit'),data=train)          
+BLUEBOOK_model<- glm(TARGET_FLAG ~ BLUEBOOK,family=binomial(link='logit'),data=train)          
+INCOME_model<- glm(TARGET_FLAG ~ INCOME,family=binomial(link='logit'),data=train)            
+CAR_AGE_model<- glm(TARGET_FLAG ~ CAR_AGE,family=binomial(link='logit'),data=train)           
+intEDUCATION_model<- glm(TARGET_FLAG ~ intEDUCATION,family=binomial(link='logit'),data=train)            
+intJOB_model<- glm(TARGET_FLAG ~ intJOB,family=binomial(link='logit'),data=train)      
+blnMSTATUS_model<- glm(TARGET_FLAG ~ blnMSTATUS,family=binomial(link='logit'),data=train)       
+intCAR_TYPE_model<- glm(TARGET_FLAG ~ intCAR_TYPE,family=binomial(link='logit'),data=train)       
+CLM_FREQ_model<- glm(TARGET_FLAG ~ CLM_FREQ,family=binomial(link='logit'),data=train)       
+TIF_model<- glm(TARGET_FLAG ~ TIF,family=binomial(link='logit'),data=train)       
+MVR_PTS_model<- glm(TARGET_FLAG ~ MVR_PTS,family=binomial(link='logit'),data=train)
+blnSEX_model<- glm(TARGET_FLAG ~ blnSEX,family=binomial(link='logit'),data=train)
+blnCAR_USE_model<- glm(TARGET_FLAG ~ blnCAR_USE,family=binomial(link='logit'),data=train)
+blnNOT_RED_CAR_model<- glm(TARGET_FLAG ~ blnNOT_RED_CAR,family=binomial(link='logit'),data=train)
+blnNOT_REVOKED_model<- glm(TARGET_FLAG ~ blnNOT_REVOKED,family=binomial(link='logit'),data=train)
+blnURBANICITY_model<- glm(TARGET_FLAG ~ blnURBANICITY,family=binomial(link='logit'),data=train)
+TRAVTIME_model<- glm(TARGET_FLAG ~ TRAVTIME,family=binomial(link='logit'),data=train)
+
+models <- list(KIDSDRIV_model,HOMEKIDS_model,AGE_model,blnPARENT1_model,BLUEBOOK_model,INCOME_model,
+               CAR_AGE_model,intEDUCATION_model,intJOB_model,blnMSTATUS_model,intCAR_TYPE_model,
+               CLM_FREQ_model,TIF_model,MVR_PTS_model,blnSEX_model,blnCAR_USE_model,blnNOT_RED_CAR_model,
+               blnNOT_REVOKED_model,blnURBANICITY_model,TRAVTIME_model,
+               HOME_VAL_model)
+
 #Creation of lists 
 var <- c()
 p_val <- c()
 aic <- c()
 auc <- c()
-
+  
+cols <- ncol(insi)
 #For loop to run variables over univarate glms
 for(i in models){
-  var <- c(var,variable.names(i)[2])
-  aic <- c(aic,i$aic)
-  p_val <- c(p_val,summary(i)$coef[2, "Pr(>|z|)"])
-  p <- predict(i, newdata=subset(test,select=c(1,2,3,4,5,6,7,8,9,10,11,12,13)), type="response")
-  pr <- prediction(p, test$target)
-  prf <- performance(pr, measure = "tpr", x.measure = "fpr")
-  auc_perf<- performance(pr, measure = "auc")
-  auc_val <- auc_perf@y.values[[1]]
-  auc <- c(auc,auc_val)
-}
-
+    var <- c(var,variable.names(i)[2])
+    aic <- c(aic,i$aic)
+    p_val <- c(p_val,summary(i)$coef[2, "Pr(>|z|)"])
+    p <- predict(i, newdata=subset(test,select=c(3:cols)), type="response")
+    pr <- prediction(p, test$TARGET_FLAG)
+    prf <- performance(pr, measure = "tpr", x.measure = "fpr")
+    auc_perf<- performance(pr, measure = "auc")
+    auc_val <- auc_perf@y.values[[1]]
+    auc <- c(auc,auc_val)
+ }
+ 
+# build a table of the model analysis results
 kable(data.frame(var,p_val,aic,auc))
 ```
+  
+  
+The highest AUC value obtained is .63, from the variable CLM_FREQ (Claim Frequency), indicating that clients with higher past claim incidents are more likely to have claims in the future.  However, .63 is not a long ways from .50, so this model is not very strong.    
+  
+  
+Next we will derive a logistic regression model by stepping backward from using all candidate variables and arriving at the variable set that maximizes the AUC value.  
+  
+#### MODEL 1 - Backward regression starting with all variables
+```{r,echo=FALSE,warning=FALSE}
+# Simple backward regression
+model_1 <- glm(TARGET_FLAG ~ .-TARGET_AMT-OLDCLAIM,family=binomial(link='logit'),data=train)
+model_1_backward <- step(model_1)
+summary(model_1_backward)
 
-Here we see the selected output criteria for the linear models run with only a single predictor variable. We examine the p-value (significance), the AIC statistic (goodness-of-fit) and the AUC (Area Under Curve) to measure the potential predictive value of each variable, so we can decide whether or not to include it in our multiple regression model.  We are looking for p-values below .05, AIC values as low as possible, and AUC values as high as possible.
+p <- predict(model_1_backward, newdata=subset(test,select=c(3:cols)), type="response")
+pr <- prediction(p, test$TARGET_FLAG)
+prf <- performance(pr, measure = "tpr", x.measure = "fpr")
+plot(prf)
+abline(a = 0, b = 1)
 
-From the above table, we can see that *chas* is the least likely to produce any meaningful inference because its p-value is well above .05 (not significant), it has the highest AIC (518, where 100 is considered excellent), and the lowest AUC (.54, where random chance would yield .50).  Therefore, *chas* is the most likely candidate to be removed from our model.  
-
-
-
-### Model 1 
-
-As a baseline, we start with a multiple logistic regression model that includes every predictor variable:
-```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
-# quick look at model with all variables
-## 80% of the sample size
-set.seed(121)
-smp_size <- floor(0.80 * nrow(crime))
-## set the seed to make your partition reproductible
-train_ind <- sample(seq_len(nrow(crime)), size = smp_size)
-
-train <- crime[train_ind, ]
-test <- crime[-train_ind, ]
-
-crime_model <- glm(target ~ .,family=binomial(link='logit'),data=train)
-
-p <- predict(crime_model, newdata=subset(test,select=c(1:13)), type="response")
-pr <- prediction(p, test$target)
+#
 auc <- performance(pr, measure = "auc")
 auc <- auc@y.values[[1]]
-summary(crime_model)
-auc  
+auc
+
 
 m1_prediction <- ifelse(p > 0.5, 1, 0)
-confusion_m1 <- confusionMatrix(data = m1_prediction, reference = test[,14])
+confusion_m1 <- confusionMatrix(data = m1_prediction, reference = test[,1])
 confusion_m1$table
 ```
-
-In this model-and in all the models- we set aside 20% of the training data and use 80% to train the model we then use the model to predict the outcome of the remaining 20% of the data.  The model yields an Area Under Curve of .95, meaning it chose correctly 95% of the time.
-
-
-### Model 2
   
-In this scenario we attempt to create the simplest model possible by using only one variable - the one that provides the highest overall AUC (performance) by itself.  We calculate AUC for each variable separately and then select the highest result. 
-
-```{r,echo=FALSE,eval=FALSE}
-## 75% of the sample size
-set.seed(121)
-smp_size <- floor(0.80 * nrow(crime))
-
-## set the seed to make your partition reproductible
-train_ind <- sample(seq_len(nrow(crime)), size = smp_size)
-
-train <- crime[train_ind, ]
-test <- crime[-train_ind, ]
-
-#show the AUC for the most valuable variable - nox (nitrogen oxides concentration - ie: poisoned environment) 
-qm <- glm(target ~ nox,family=binomial(link='logit'),data=train)
-p <- predict(qm, newdata=subset(test,select=c(4)), type="response")
-pr <- prediction(p, test$target)
-auc <- performance(pr, measure = "auc")
-auc <- auc@y.values[[1]]
-summary(qm)
-auc 
-
-```
+Our derived logistic regression model has a maximize AUC value of .79 with great p-values on all of the selected variables.  
   
-The best predictor variable is *nox*, yielding an AUC of .87.  
-  
+The table below illustrates the various fitness parameters that describe the effectiveness of the logistic regression model.  
 
-Next we combine *nox* with each of the remaining variables individually and select the highest AUC result.
-  
-```{r,echo=FALSE,eval=FALSE}
-
-#show the AUC for the best combination of two variables - nox and rad
-qm <- glm(target ~ nox + rad,family=binomial(link='logit'),data=train)
-p <- predict(qm, newdata=subset(test,select=c(4,8)), type="response")
-pr <- prediction(p, test$target)
-auc <- performance(pr, measure = "auc")
-auc <- auc@y.values[[1]]
-summary(qm)
-auc  #.948
-
-```
-
-We find that *nox* plus *rad* is the strongest combinaton of two variables, yielding an AUC of .93.
-
-Finally, we search for a third critical predictor by combining *nos* plus *rad* with the remaining variables, individually.  
-  
-```{r,echo=FALSE,eval=FALSE}
-
-#show the AUC for the best combination of three variables - nox, rad and zn
-qm <- glm(target ~ nox + rad + zn,family=binomial(link='logit'),data=train)
-p <- predict(qm, newdata=subset(test,select=c(1,4,8)), type="response")
-pr <- prediction(p, test$target)
-auc <- performance(pr, measure = "auc")
-auc <- auc@y.values[[1]]
-summary(qm)
-auc  
-
-m2_prediction <- ifelse(p > 0.5, 1, 0)
-confusion_m2 <- confusionMatrix(data = m2_prediction, reference = test[,14])
-confusion_m2$table
-```
-  
-By combining three variables - *nox*, *rad* and *zn* - that is, the concentration of nitrogen oxides, access to radial highways and the proportion of land zoned for large lots, we can predict with 94% accuracy whether the crime rate at this property is above or below average.  Since this is very close to the performance of the model using all variables (95%), we can be confident in using these three variables for our decision support process, and disregarding the others.  
-  
-
-###Model 3
-
-The GLM Model summary in Model 1 illustrates the outsize impact of the predictor variable *nox* compared to all the others.  It carries an Estimate of 53.3 where the next closest in magnitude is only 1.2.  We thought it would be interesting to remove *nox* from the model just to see how the other variables perform without it.  First we will perform a simple backward variable selection optimization process including it.
-
-
-#### MODEL 3 WITH NOX VARIABLE
-```{r,echo=FALSE,warning=FALSE,eval=FALSE}
-# Simple backward regression
-model_3 <- glm(target ~ .,family=binomial(link='logit'),data=train)
-backward <- step(model_3)
-summary(backward)
-
-p <- predict(backward, newdata=subset(test,select=c(1,2,3,4,5,6,7,8,9,10,11,12,13)), type="response")
-pr <- prediction(p, test$target)
-prf <- performance(pr, measure = "tpr", x.measure = "fpr")
-plot(prf)
-abline(a = 0, b = 1)
-
-
-#
-auc <- performance(pr, measure = "auc")
-auc <- auc@y.values[[1]]
-auc
-
-
-m3_prediction <- ifelse(p > 0.5, 1, 0)
-confusion_m3 <- confusionMatrix(data = m3_prediction, reference = test[,14])
-confusion_m3$table
-```
-
-The model reduces to nine variables and yields a nice low residual deviance of 133.9, compared to a null deviance of 515.3.  This roughly means that the model eliminates about 80% of the error compared to choosing at random.  The AUC is .947 which is roughly the same as the full model using all variables.  
-
-
-Let's look at what happens when we remove the *nox* variable:
-
-
-#### MODEL 3 WITHOUT NOX VARIABLE
-```{r,echo=FALSE,warning=FALSE,eval=FALSE}
-# Simple backward regression
-model_3 <- glm(target ~ .-nox,family=binomial(link='logit'),data=train)
-backward <- step(model_3)
-summary(backward)
-
-p <- predict(backward, newdata=subset(test,select=c(1,2,3,4,5,6,7,8,9,10,11,12,13)), type="response")
-pr <- prediction(p, test$target)
-prf <- performance(pr, measure = "tpr", x.measure = "fpr")
-plot(prf)
-abline(a = 0, b = 1)
-
-
-#
-auc <- performance(pr, measure = "auc")
-auc <- auc@y.values[[1]]
-auc
-
-```
-
-We still have a good model - the Residual Deviance increased to 182, but that is still much better than predicting with no model at all.  The AUC is now .89 - again, very good.  But the AUC with only one variable *nox* was .87.  And in certain trials the AUC with *nox* exceeded .95 (due to randomly selected evaluation samples).
-
-Why is the *nox* variable so powerful?  We can look back at the Correlation table for clues.  More variables are significantly correlated to *nox* than any other.  It is like a super-variable, somehow encapsulating the properties of the variables around it.  Is it because *nox* is an indicator of so many problems, like pollution, industrial decay, lax building codes?  The *nox* variable is a stellar example of a finding that opens up many paths for further research.  
-
-Below is table illustrating the various fitness parameters that describe the effectiveness of the models.  All the models are good - from a practical perspective, there is no difference between them.  
-
-```{r,echo=FALSE,warning=FALSE,eval=FALSE}
+```{r,echo=FALSE,warning=FALSE}
 # function to calculate the F1 score
 f1 <- function(s,p) {
   (2*p*s)/(p+s)
@@ -633,51 +526,202 @@ f1 <- function(s,p) {
 
 Parameters <- c("Accuracy", "Classification Error Rate", "Precision", "Sensitivity", "Specificity", "F1 Score")
 
-#Model1 <- c(confusion_m1$overall["Accuracy"], 1 - confusion_m1$overall["Accuracy"], confusion_m1$byClass["Pos Pred Value"], confusion_m1$byClass["Sensitivity"], confusion_m1$byClass["Specificity"], confusion_m1$byClass["F1"])
 Model1 <- c(confusion_m1$overall["Accuracy"], 1 - confusion_m1$overall["Accuracy"], confusion_m1$byClass["Pos Pred Value"], confusion_m1$byClass["Sensitivity"], confusion_m1$byClass["Specificity"], f1(confusion_m1$byClass["Sensitivity"],confusion_m1$byClass["Pos Pred Value"]))
 
-#Model2 <- c(confusion_m2$overall["Accuracy"], 1 - confusion_m2$overall["Accuracy"], confusion_m2$byClass["Pos Pred Value"], confusion_m2$byClass["Sensitivity"], confusion_m2$byClass["Specificity"], confusion_m2$byClass["F1"])
-Model2 <- c(confusion_m2$overall["Accuracy"], 1 - confusion_m2$overall["Accuracy"], confusion_m2$byClass["Pos Pred Value"], confusion_m2$byClass["Sensitivity"], confusion_m2$byClass["Specificity"], f1(confusion_m2$byClass["Sensitivity"],confusion_m2$byClass["Pos Pred Value"]))
-
-#Model3 <- c(confusion_m3$overall["Accuracy"], 1 - confusion_m3$overall["Accuracy"], confusion_m3$byClass["Pos Pred Value"], confusion_m3$byClass["Sensitivity"], confusion_m3$byClass["Specificity"], confusion_m3$byClass["F1"])
-Model3 <- c(confusion_m3$overall["Accuracy"], 1 - confusion_m3$overall["Accuracy"], confusion_m3$byClass["Pos Pred Value"], confusion_m3$byClass["Sensitivity"], confusion_m3$byClass["Specificity"], f1(confusion_m3$byClass["Sensitivity"],confusion_m3$byClass["Pos Pred Value"]))
-
-model_summary <- data.frame(Parameters, Model1, Model2, Model3)
+model_summary <- data.frame(Parameters, Model1)
 
 kable(model_summary)
-
 ```
 
+###Linear Regression Models  
+
+For the linear regression model, we went ahead and attempted to produce several models to try and find the cost of repair based on several factors. Unlike in the Logistic Model, where we utilized all the variables and work backwards, for the linear approach we decided to limit to 8 variables, which most "intuitively" made sense to include when trying to predict cost. Certain variables, even when made into numeric values, just would not make any sense to predict cost. For instance, all binary data was eliminated from this model, it just didn't seem reasonable to predict a continous value using these independent variables. So, we started modeling from these Variables:
+"TARGET_FLAG","INCOME","TRAVTIME","BLUEBOOK", "YOJ","intEDUCATION","intJOB","CAR_AGE"
+
+Our first attempt at modelling will be to take a generic linear model with our two tranformed variables that we kept:
+
+```{r,echo=FALSE,warning=FALSE}
+lin_model <- subset(insi, TARGET_FLAG == 1)
+Var_lm <- c("TARGET_AMT","TARGET_FLAG","INCOME","TRAVTIME","BLUEBOOK", "YOJ","intEDUCATION","intJOB","CAR_AGE")
+```
+
+```{r,echo=FALSE,warning=FALSE}
+model_ols <- lm(TARGET_AMT ~ INCOME + TRAVTIME + BLUEBOOK+
+                    YOJ + intEDUCATION + intJOB + CAR_AGE, 
+                    data =lin_model)
+summary(model_ols)
+
+plot(fitted(model_ols), residuals(model_ols))
+```
+
+From the above, we can see that a straight linear model was not very effective at producing any results.
+
+Aside (Matt's point of view)- At this point, I had tried several different ways to mitigate the problem shown above, and that was that the only variable I saw of any signficance was the BLUEBOOK value. I tried different a differnt transformation type mostly of the log(TARGET_AMT) ~ log(Dependent Variables). I then tried several different weighting types like 1/SD and 1/fitted (shown below), but I still got the same results. Through entirely happenstance, as we were working off the same dataset, one of my compatriates overwrote the variables to transform only two variables with the log function, the TRAVTIME and BLUEBOOK variable. Since I left the code sitting there, lo and behold, the transformations of just those two skewed values changed the entire code. 
+
+```{r,echo=FALSE,warning=FALSE}
+wts <- 1/fitted(lm(abs(residuals(model_ols)) ~ fitted(model_ols)))^2
+
+#length(wts)
+#length(model_ols$residuals)
+model_wls <- lm(TARGET_AMT ~ INCOME + TRAVTIME + BLUEBOOK+
+                    YOJ + intEDUCATION + intJOB + CAR_AGE, 
+                    data = lin_model, weights = wts)
+summary(model_wls)
+plot(fitted(model_wls), residuals(model_wls))
+```
+
+Using this weighing value, which weights each variable according to $1/(fitted)^2$. As you can see from the p values and the $R^2$-values our model become much more approproate. Originally we were has a "goodness of fit" measure of 1% barely describing the variance in our model. With the weighting, we now have a much higher $R^2$. 
 
 
+Originally, our model we were going to choose relied on the below, which used log transformations on most of the independent variables AND our independent variable. 
+```{r,echo=FALSE,warning=FALSE}
+log_var <- c("TARGET_AMT","INCOME")
+
+log_lin_model <- lin_model[Var_lm]
+log_lin_model[log_var] <- log(log_lin_model[log_var])
+log_lin_model <- do.call(data.frame,lapply(log_lin_model, function(x) replace(x, is.infinite(x),0)))
+log_model_ols <- lm(TARGET_AMT ~ INCOME + TRAVTIME + BLUEBOOK+
+                      YOJ + intEDUCATION + intJOB + CAR_AGE, 
+                    data =log_lin_model)
+
+summary(log_model_ols)
+
+plot(fitted(log_model_ols), residuals(log_model_ols))
+
+log_wts <- 1/fitted(lm(abs(residuals(log_model_ols)) ~ fitted(log_model_ols)))^2
+
+log_model_wls <- lm(TARGET_AMT ~ INCOME + TRAVTIME + BLUEBOOK+
+                    YOJ + intEDUCATION + intJOB + CAR_AGE, 
+                    data = log_lin_model, weights = log_wts)
+summary(log_model_wls)
+
+plot(fitted(log_model_wls), rstandard(log_model_wls))
+```
+
+As you can see from the statistical output, with a log transformed dependent variable, our model does not hold up. However, or F-statistic is much lower, and the reason for this, is that the F-statistic is not corrected for the weights. 
+
+
+```{r}
+backward <- step(model_wls)
+summary(backward)
+```
 \begin{center}
 {\huge Choose Model}
 \end{center}
-
 
 --------
 
 ##Choose Model
 
 
-We like *Model 3 With Nox* the best because it eliminates some of the questionable variables - the ones with high skew and many outliers, also it eliminates the chas variable, which was shown earlier as being insignificant.  Ridding the model of these variables helps provide insurance against poor decisions that could arise, *even if they do not show up in the model.* 
+We chose the Backward logistic regression model to make our predictions for the evaluation dataset (non-zero value). This model has accuracy rate as high as 80%. In the meantime, the precision and sensitivity are at the level of 82% and 92%, which indicate this model is very good at eliminating false negative and false positive situations.  Both AUC and F1 Score are around 80%, which also indicates that it has high accuracy in terms of predicting the final response variables.
 
-#### MODEL 3 WITH NOX VARIABLE USING FULL DATASETS
-```{r,echo=FALSE,warning=FALSE,fig.width = 8, fig.height = 3,eval=FALSE}
-# recreate the model using the same variables, but using the full dataset
-model_3 <- glm(target ~ zn+nox+age+dis+rad+tax+ptratio+black+medv,family=binomial(link='logit'),data=crime)
-summary(model_3)
-p <- predict(model_3, newdata=subset(crime_eval,select=c(1,4,6,7,8,9,10,11,13)), type="response")
 
-#predict.prob <- 1/exp(p)
-#predict.prob <- 1/(1+exp(-p))
-predict.prob <- p
-predict.result <- ifelse(predict.prob>=.50, 1, 0)
+```{r, echo=FALSE, warning=FALSE}
+#The following is simply the data preparation step. To get evaluation data ready to plug into our model.
 
-crime_eval <- cbind(crime_eval,predict.prob,predict.result)
-kable(crime_eval[,-c(2,3,5,12)])
+eval_copy <- ins_eval
+eval_copy$MSTATUS    <- str_replace(eval_copy$MSTATUS, pattern = "z_No", replacement = "No")
+eval_copy$SEX        <- str_replace(eval_copy$SEX, pattern = "z_F", replacement = "F")
+eval_copy$EDUCATION  <- str_replace(eval_copy$EDUCATION, pattern = "z_High School", replacement = "Secondary")
+eval_copy$EDUCATION  <- str_replace(eval_copy$EDUCATION, pattern = "<High School", replacement = "Primary")
+eval_copy$JOB        <- str_replace(eval_copy$JOB, pattern = "z_Blue Collar", replacement = "Tradesperson")
+eval_copy$CAR_TYPE   <- str_replace(eval_copy$CAR_TYPE, pattern = "z_SUV", replacement = "SUV")
+eval_copy$URBANICITY <- str_replace(eval_copy$URBANICITY, pattern = "Highly Urban/ Urban", replacement = "Urban")
+eval_copy$URBANICITY <- str_replace(eval_copy$URBANICITY, pattern = "z_Highly Rural/ Rural", replacement = "Rural")
+
+eval_copy$CAR_AGE[eval_copy$CAR_AGE < 0 ] <- 0
+eval_copy$TARGET_AMT <- round(eval_copy$TARGET_AMT,digits = 0)
+
+eval_copy$TARGET_FLAG <- sToNum(eval_copy$TARGET_FLAG)
+eval_copy$INCOME      <- sToNum(eval_copy$INCOME)
+eval_copy$HOME_VAL    <- sToNum(eval_copy$HOME_VAL)
+eval_copy$BLUEBOOK    <- sToNum(eval_copy$BLUEBOOK)
+eval_copy$OLDCLAIM    <- sToNum(eval_copy$OLDCLAIM)
+
+eval_copy$blnPARENT1     <- sToBLN(eval_copy$PARENT1)
+eval_copy$blnMSTATUS     <- sToBLN(eval_copy$MSTATUS)
+eval_copy$blnSEX         <- sToBLN(eval_copy$SEX)
+eval_copy$blnCAR_USE     <- sToBLN(eval_copy$CAR_USE)
+eval_copy$blnNOT_RED_CAR <- sToBLN_Reverse(eval_copy$RED_CAR)
+eval_copy$blnNOT_REVOKED <- sToBLN_Reverse(eval_copy$REVOKED)
+eval_copy$blnURBANICITY  <- sToBLN(eval_copy$URBANICITY)
+
+educ <- data.frame(EDUCATION = c("Primary","Secondary","Bachelors","Masters","PhD"), intEDUCATION = c(1,2,3,4,5))
+eval_copy$intEDUCATION <- educ$intEDUCATION[match(eval_copy$EDUCATION,educ$EDUCATION)]
+job <- data.frame(JOB = c("Student","Home Maker", "Clerical", "Tradesperson", "Professional", "Manager", "Lawyer", "Doctor"), intJOB = c(1,2,3,4,5,6,7,8))
+eval_copy$intJOB <- job$intJOB[match(eval_copy$JOB, job$JOB)]
+typ <- data.frame(CAR_TYPE = c("Sports Car","SUV","Pickup","Minivan","Van","Panel Truck"), intCAR_TYPE = c(1,2,3,4,5,6)) 
+eval_copy$intCAR_TYPE <- typ$intCAR_TYPE[match(eval_copy$CAR_TYPE, typ$CAR_TYPE)]
+
+mice.i <- mice(eval_copy, m = 3, print=F)
+mice.ic <- complete(mice.i,1)
+
+eval_copy <- subset(mice.ic, select = c("TARGET_FLAG", "TARGET_AMT", "KIDSDRIV", "AGE", "HOMEKIDS", "YOJ", "INCOME", "HOME_VAL", "TRAVTIME", "BLUEBOOK", "TIF", "OLDCLAIM", "CLM_FREQ", "MVR_PTS", "CAR_AGE", "blnPARENT1", "blnMSTATUS", "blnSEX", "blnCAR_USE", "blnNOT_RED_CAR", "blnNOT_REVOKED", "blnURBANICITY", "intEDUCATION", "intJOB", "intCAR_TYPE"))
 
 ```
 
+
+```{r, echo=FALSE, warning=FALSE}
+# Perform log transformation on the previously identified variables
+HOME_VAL.median <- median(eval_copy$HOME_VAL)
+BLUEBOOK.median <- median(eval_copy$BLUEBOOK)
+TRAVTIME.median <- median(eval_copy$TRAVTIME)
+
+eval_copy$HOME_VAL[eval_copy$HOME_VAL<=0] <- HOME_VAL.median
+eval_copy$BLUEBOOK[eval_copy$BLUEBOOK<=0] <- BLUEBOOK.median
+eval_copy$TRAVTIME[eval_copy$TRAVTIME<=0] <- TRAVTIME.median
+
+eval_copy$BLUEBOOK <- log(eval_copy$BLUEBOOK)
+eval_copy$TRAVTIME <- log(eval_copy$TRAVTIME)
+eval_copy$HOME_VAL <- log(eval_copy$HOME_VAL)
+
+# Built the model using the train dataset. Then we save the results under TARGET_FLAG in eval dataset.
+# use the backward step model created earlier so comment this code out eve though it's equivalent
+#model_3 <- glm(TARGET_FLAG ~ KIDSDRIV + INCOME + TIF + CLM_FREQ + MVR_PTS + blnPARENT1 + blnMSTATUS + blnCAR_USE + blnNOT_REVOKED + blnURBANICITY + intEDUCATION + intJOB + intCAR_TYPE + BLUEBOOK + TRAVTIME + HOME_VAL, family = binomial(link='logit'), data = train)
+#summary(model_3)
+
+p <- predict(model_1_backward, newdata=eval_copy, type = "response")
+
+eval_copy$TARGET_FLAG <- ifelse(p >= .50, 1, 0)
+
+```
+
+
+For linear regression model, we are showing the outputs of each of the 4 tests we had. M1 = straight LM with 2 transformations, m2 = weight lm, m3 = straight lm with log independent, m4 = same as previous but weighted. According to the following summary statistics, the weighted lm out performs all the others. As mentioned previously, the F-statistic is high, which might indicate our model lacks validity. Or it could also indicate the claim amount of motor vehicle accident tends to be unpredictable, and wit
+
+
+```{r, echo=FALSE, warning=FALSE}
+Parameters <- c("p-value", "Mean Squared Error", "R^2", "F-Statistics")
+
+m1 <- c(summary(model_ols)$coef[4, "Pr(>|t|)"], mean(summary(model_ols)$residuals^2), summary(model_ols)$r.squared, summary(model_ols)$fstatistic[1])
+m2 <- c(summary(model_wls)$coef[4, "Pr(>|t|)"], mean(summary(model_wls)$residuals^2), summary(model_wls)$r.squared, summary(model_wls)$fstatistic[1])
+m3 <- c(summary(log_model_ols)$coef[4, "Pr(>|t|)"], mean(summary(log_model_ols)$residuals^2), summary(log_model_ols)$r.squared, summary(log_model_ols)$fstatistic[1])
+m4 <- c(summary(log_model_wls)$coef[4, "Pr(>|t|)"], mean(summary(log_model_wls)$residuals^2), summary(log_model_wls)$r.squared, summary(log_model_wls)$fstatistic[1])
+
+
+#I got a out of bound error for m5, I do not know how to fix it. 
+
+#m5 <- c(summary(backward)$coef[4, "Pr(>|t|)"], mean(summary(backward)$residuals^2), summary(backward)$r.squared, summary(backward)$fstatistic[1])
+
+model_summary <- data.frame(Parameters, m1, m2, m3, m4)
+kable(model_summary)
+```
+
+
+```{r, echo=FALSE, warning=FALSE}
+#Build model based on our weighted least square model with wts 
+linear_model <- lm(formula = TARGET_AMT ~ INCOME + TRAVTIME + BLUEBOOK + YOJ + 
+    intEDUCATION + intJOB + CAR_AGE, data = lin_model, weights = wts)
+summary(linear_model)
+eval_copy$TARGET_AMT <- predict(linear_model, newdata = eval_copy, type = "response")
+```
+
+Below is the evaluation of the first 20 values on the evaluation test dataset. 
+```{r, echo=FALSE, warning=FALSE}
+kable(head(eval_copy[,c(1:8)], 20))
+kable(head(eval_copy[,c(9:16)], 20))
+kable(head(eval_copy[,c(17:length(insi))], 20))
+```
 
 The Smooth Operators of R Fusion Have Struck Again.
