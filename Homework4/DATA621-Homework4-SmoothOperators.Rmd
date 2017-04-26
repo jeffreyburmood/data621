@@ -2,7 +2,9 @@
 title: "DATA621-Homework4-SmoothOperators"
 author: "Rob Hodde, Matt Farris, Jeffrey Burmood, Bin Lin"
 date: "4/17/2017"
-output: pdf_document
+output:
+  pdf_document: default
+  html_document: default
 ---  
   
 ###Problem Description
@@ -11,7 +13,7 @@ The objective is to build multiple linear regression and binary logistic regress
   
 Each record has two response variables. The first response variable, TARGET_FLAG, is a 1 or a 0. A "1" means that the person was in a car crash. A zero means that the person was not in a car crash. The second response variable is TARGET_AMT. This value is zero if the person did not crash their car. But if they did crash their car, this number will be a value greater than zero.  
 
-Using the training data set, evaluate the multiple linear regression model based on (a) mean squared error, (b) R2, (c) F-statistic, and (d) residual plots. For the binary logistic regression model, will use a metric such as log likelihood, AIC, ROC curve, etc.? Using the training data set, evaluate the binary logistic regression model based on (a) accuracy, (b) classification error rate, (c) precision, (d) sensitivity, (e) specificity, (f) F1 score, (g) AUC, and (h) confusion matrix. Make predictions using the evaluation data set.  
+Using the training data set, evaluate the multiple linear regression model based on (a) mean squared error, (b) R2, (c) F-statistic, and (d) residual plots. For the binary logistic regression model, will use a metric such as log likelihood, AIC, or ROC curve.  Using the training data set, evaluate the binary logistic regression model based on (a) accuracy, (b) classification error rate, (c) precision, (d) sensitivity, (e) specificity, (f) F1 score, (g) AUC, and (h) confusion matrix. Make predictions using the evaluation data set.  
   
 Approach Steps:
   
@@ -32,19 +34,20 @@ Approach Steps:
 
 ##Data Exploration
 
-
-```{r,echo=FALSE,warning=FALSE}
+  
+```{r,echo=FALSE,include=FALSE}
 # Load required libraries
-library(ggplot2)
-library(ROCR)
-library(RCurl)
-library(knitr)
-library(Hmisc)
-library(caret)
-library(stringr)
-library(mice)
-library(dplyr)
-library(reshape2)
+suppressWarnings(suppressMessages(library(ggplot2)))
+suppressWarnings(suppressMessages(library(ROCR)))
+suppressWarnings(suppressMessages(library(RCurl)))
+suppressWarnings(suppressMessages(library(knitr)))
+suppressWarnings(suppressMessages(library(Hmisc)))
+suppressWarnings(suppressMessages(library(caret)))
+suppressWarnings(suppressMessages(library(stringr)))
+suppressWarnings(suppressMessages(library(mice)))
+suppressWarnings(suppressMessages(library(dplyr)))
+suppressWarnings(suppressMessages(library(reshape2)))
+
 #
 # Read in the dataset from github
 ins <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/master/Homework4/data/insurance_training_data.csv"),header=TRUE,na.strings=c(""," "), stringsAsFactors = FALSE)
@@ -52,6 +55,17 @@ ins_eval <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmo
 ```
   
 
+The first steps in our process was to explore our data. During this exploration, we immediately noticed the presence of inconsistent data, which is why we employed the use of the MICE package to provide weighted mean data to any missing values. 
+
+
+Our next step was to change the categorical data into numeric values, which was accomplished using the following legend:
+\begin{center}
+![](https://raw.githubusercontent.com/jeffreyburmood/data621/master/Homework4/New_Variables.png)
+\end{center}
+
+After that, we repaired the offending values, standardized the data types, and add new variables to quantitatively represent the binary and categorical choices available in the data:
+
+  
 ```{r,echo=FALSE,warning=FALSE}
 
 #DATA CLEANSING
@@ -133,7 +147,7 @@ insc$intJOB <- job$intJOB[match(insc$JOB, job$JOB)]
 typ <- data.frame(CAR_TYPE = c("Sports Car","SUV","Pickup","Minivan","Van","Panel Truck"), intCAR_TYPE = c(1,2,3,4,5,6)) 
 insc$intCAR_TYPE <- typ$intCAR_TYPE[match(insc$CAR_TYPE, typ$CAR_TYPE)]
 
-summary(insc) #Show the new attributes and corrections
+#summary(insc) #Show the new attributes and corrections
 
 #mice PACKAGE
 #uses Predictive Mean Matching. 
@@ -142,19 +156,18 @@ mice.ic <- complete(mice.i,1)
 
 insi <- subset(mice.ic,select = c("INDEX", "TARGET_FLAG", "TARGET_AMT", "KIDSDRIV", "AGE", "HOMEKIDS", "YOJ", "INCOME", "HOME_VAL", "TRAVTIME", "BLUEBOOK", "TIF", "OLDCLAIM", "CLM_FREQ", "MVR_PTS", "CAR_AGE", "blnPARENT1", "blnMSTATUS", "blnSEX", "blnCAR_USE", "blnNOT_RED_CAR", "blnNOT_REVOKED", "blnURBANICITY", "intEDUCATION", "intJOB", "intCAR_TYPE"))
 
-head(insi)
-summary(insi)  #  <---- USE insi DATA FRAME for modeling with imputed data  ***
-#conclusion: the imputed values are above zero.  wish I could see methods, R-Squares 
+#head(insi)
+#summary(insi)  #  <---- USE insi DATA FRAME for modeling with imputed data  ***
+#conclusion: the imputed values are above zero.  
 
 #now we must make a dataframe with numeric-only fields
 insi <- subset(mice.ic,select = c("INDEX", "TARGET_FLAG", "TARGET_AMT", "KIDSDRIV", "AGE", "HOMEKIDS", "YOJ", "INCOME", "HOME_VAL", "TRAVTIME", "BLUEBOOK", "TIF", "OLDCLAIM", "CLM_FREQ", "MVR_PTS", "CAR_AGE", "blnPARENT1", "blnMSTATUS", "blnSEX", "blnCAR_USE", "blnNOT_RED_CAR", "blnNOT_REVOKED", "blnURBANICITY", "intEDUCATION", "intJOB", "intCAR_TYPE"))
 
-head(insi)
-insi2 <- insi
+#head(insi)
+#insi2 <- insi
 ```
 
-
-
+  
 Below is a summary of each predictor variable's basic statistics, followed by boxplots which illustrate the spread and outliers for each variable.    
 
 
@@ -171,7 +184,8 @@ kable(types.df)
 kable(summary(insi[1:6]))
 kable(summary(insi[7:12]))
 kable(summary(insi[13:18]))
-kable(summary(insi[19:length(insi)]))
+kable(summary(insi[19:21]))
+kable(summary(insi[22:length(insi)]))
 
 # Look over the variables checking for outliers/influential points, correlation between variables, etc. using box plots.
 #
@@ -215,7 +229,8 @@ boxplot(insi$MVR_PTS, main="MVR_PTS")
 ```
 
 ```{r,echo=FALSE,warning=FALSE,fig.height = 3}
-#par(mfcol=c(1,3))
+par(mfcol=c(1,3))
+
 boxplot(insi$CAR_AGE, main="CAR_AGE")
 ```
    
@@ -223,15 +238,27 @@ boxplot(insi$CAR_AGE, main="CAR_AGE")
 # Lastly, build a correlation table to identify any relationships between the predictor variables
 # get a table of only predictor variables
 insi.pred <- subset(insi,select=-c(TARGET_FLAG,TARGET_AMT))
+```
+
+Below is a correlation table illustrating the collinearity of each variable to the others.  
+
+   
+```{r,echo=FALSE,warning=FALSE}
+# Lastly, build a correlation table to identify any relationships between the predictor variables
+# get a table of only predictor variables
+insi.pred <- subset(insi,select=-c(TARGET_FLAG,TARGET_AMT))
 
 cor.table <- cor(insi.pred) # build a table of inter-variable correlation values
-kable(cor.table[,1:8])
-kable(cor.table[,9:16])
+kable(cor.table[,1:6])
+kable(cor.table[,7:12])
+kable(cor.table[,13:18])
+
 ```
   
 Here are the results from an analysis of the predictor variable correlations:  
   
 The are no strong correlations (>70%) between predictor variables, not enough to allow consideration of removing a variable from the model based on a high correlation with another variable. There is some moderate correlation (30-50%) between some variable highlighting obvious relationships such as HOMEKIDS-KIDSDRIV, HOME_VAL-INCOME, EDUCATION-INCOME, JOB-INCOME, CAR_TYPE-BLUEBOOK, CLM_FREQ-OLDCLAIM, and MVR_PTS-CLM_FREQ.  
+
   
 Based on an analysis of the box plots, the following variables have some outliers that may, or may not, exert influence on the regression results: 
     - KIDSDRIV, HOME_VAL, TRAVTIME, MVR_PTS, AGE, INCOME, BLUEBOOK, OLDCLAIM  
@@ -348,20 +375,6 @@ The analysis of the distributions for these variables show varying degrees of sk
   
 For the logistic regression analysis, we would like to remove as much of the skewness as possible from the candidate predictor variables. A transformation analysis was performed and a log transformation of most of the skewed variables result in a near-normal distribution consequently, for the logistic regression model, we will use the log value of the following variables for the modeling: OLDCLAIM, BLUEBOOK, TRAVTIME, HOME_VAL.  
 
-The last step in the data exploration is to examine the correlation tables, to see if there is any potential correlations that will impact our models. The below table shows the a condense correlation table showing only the highest positive and negative correlations (in this case above 0.5 and below -.5)  
-  
-  
-```{r,echo=FALSE,warning=FALSE}
-# build a correlation table to study the variable relationships
-cor.table <- cor(insi) # build a table of inter-variable correlation values
-cor.table <- melt(cor.table)
-cor.table <- subset(cor.table, value != 1)
-cor.table <- subset(cor.table, value >= .5 | value <= -.5)
-cor.table <- distinct(cor.table,value)
-#colnames(cor.table)<-c("Var 1","Var 2", "Correlations")
-#kable(cor.table)
-```
-As you can see, certain variables are correlated, and they are values that we would expect to be correlated. We expect there to be a correlation between income and jobs/home value and educations, as these are well established indicators of success. Higher educated people are more likely to secure higher paying jobs, which we can see in the higher correlations for these values. Furthermore, car type is going to be a clear indicator of the value of the car. Sports cars and suvs cost more than compacts. An interestiong but also intuitive correlations exists bewteen gender and car type and car color. The car type is very interesting, as we almost arbitraily set the type to a numeric value 1 - 6 according to this list "Sports Car","SUV","Pickup","Minivan","Van","Panel Truck" respectively. As the correlation is negative, it shows that as the value goes "up/higher" we see less women in these types of cars. Though this is a binary correlation, and the weight of such can be consider not very conclusive, it is interesting to note. The most likely reason for this offset correlation is because panel truck is listed highest, which we can assume would be a predominately male oriented mode of transportation. 
 
 \begin{center}
 {\huge Data Preparation}
@@ -371,9 +384,12 @@ As you can see, certain variables are correlated, and they are values that we wo
 
 ##Data Preparation
 
-Here we do the log transformation of the variables identifed earlier with high skewness. One of the variables, OLDCLAIM, has such a distorted distribution that the log transformation will not be sufficient to make the variable a viable candidate for our model. For the OLDCLAIM variable, the difference between the median and the mean is so large we will not attempt to use the OLDCLAIM variable.   
+As stated earlier, most of preparation was done prior to a thorough exploration. The reason being, is that the missing value was such a hinderance to proper exploration.
+
+Here we perform the log transformation of the variables identifed earlier with high skewness. One of the variables, OLDCLAIM, has such a distorted distribution that the log transformation will not be sufficient to make the variable a viable candidate for our model. For the OLDCLAIM variable, the difference between the median and the mean is so large we will not attempt to use the OLDCLAIM variable.
+
   
-```{r,echo=FALSE,warning=FALSE}
+```{r}
 # perform the log transformation for the selected predictor variables and add to the data frame
 # no variables used in the log transform can have a value of 0
 
@@ -389,134 +405,17 @@ insi$BLUEBOOK <- log(insi$BLUEBOOK)
 insi$TRAVTIME <- log(insi$TRAVTIME)
 insi$HOME_VAL <- log(insi$HOME_VAL)
 ```
-
-
-Next a brief review of the linear models of all the variables
-```{r,echo=FALSE,warning=FALSE}
-# quick look at model with all variables
-
-lin_insi <- subset(insi, TARGET_FLAG ==1)
-
-KIDSDRIV_lm <- lm(TARGET_AMT ~ KIDSDRIV,data=lin_insi)
-AGE_lm <- lm(TARGET_AMT ~ AGE,data=lin_insi)
-HOMEKIDS_lm <- lm(TARGET_AMT ~ HOMEKIDS,data=lin_insi)
-YOJ_lm <- lm(TARGET_AMT ~ YOJ,data=lin_insi)
-INCOME_lm <- lm(TARGET_AMT ~ INCOME,data=lin_insi)
-TRAVTIME_lm <- lm(TARGET_AMT ~ TRAVTIME,data=lin_insi)
-BLUEBOOK_lm <- lm(TARGET_AMT ~ BLUEBOOK,data=lin_insi)
-TIF_lm <- lm(TARGET_AMT ~ TIF,data=lin_insi)
-OLDCLAIM_lm <- lm(TARGET_AMT ~ OLDCLAIM,data=lin_insi)
-CLM_FREQ_lm <- lm(TARGET_AMT ~ CLM_FREQ,data=lin_insi)
-MVR_PTS_lm <- lm(TARGET_AMT ~ MVR_PTS,data=lin_insi)
-CAR_AGE_lm <- lm(TARGET_AMT ~ CAR_AGE,data=lin_insi)
-blnPARENT1_lm <- lm(TARGET_AMT ~ blnPARENT1,data=lin_insi)
-blnMSTATUS_lm <- lm(TARGET_AMT ~ blnMSTATUS,data=lin_insi)
-blnSEX_lm <- lm(TARGET_AMT ~ blnSEX,data=lin_insi)
-blnCAR_USE_lm <- lm(TARGET_AMT ~ blnCAR_USE,data=lin_insi)
-blnNOT_RED_CAR_lm <- lm(TARGET_AMT ~ blnNOT_RED_CAR,data=lin_insi)
-blnNOT_REVOKED_lm <- lm(TARGET_AMT ~ blnNOT_REVOKED,data=lin_insi)
-blnURBANICITY_lm <- lm(TARGET_AMT ~ blnURBANICITY,data=lin_insi)
-intEDUCATION_lm <- lm(TARGET_AMT ~ intEDUCATION,data=lin_insi)
-intJOB_lm <- lm(TARGET_AMT ~ intJOB,data=lin_insi)
-intCAR_TYPE_lm <- lm(TARGET_AMT ~ intCAR_TYPE,data=lin_insi)
-
-models <- list(KIDSDRIV_lm, AGE_lm,HOMEKIDS_lm,YOJ_lm,INCOME_lm,
-              TRAVTIME_lm,BLUEBOOK_lm,TIF_lm,OLDCLAIM_lm,CLM_FREQ_lm,
-              MVR_PTS_lm,CAR_AGE_lm,blnPARENT1_lm,blnMSTATUS_lm,
-              blnSEX_lm,blnCAR_USE_lm,blnNOT_RED_CAR_lm,blnNOT_REVOKED_lm,
-              blnURBANICITY_lm,intEDUCATION_lm,intJOB_lm,intCAR_TYPE_lm)
-```
-
-
-```{r,echo=FALSE,warning=FALSE}
-#Creation of lists 
-var <- c()
-p_val <- c()
-r2_val <- c()
-
-#For loop to run variables over univarate glms
-for(i in models){
-  var <- c(var,variable.names(i)[2])
-  p_val <- c(p_val,summary(i)$coef[2, "Pr(>|t|)"])
-  r2_val <- c(r2_val,summary(i)$adj.r.squared)
-}
-
-data.frame(var,p_val,r2_val)
-```
+  
 
 \begin{center}
-{\huge Build Models}
+{\huge Data Preparation}
 \end{center}
 
 
-##Build Models
-
+##Data Preparation
 
 One method of developing multiple regression models is to take a stepwise approach.  To accomplish this, we combine our knowledge from the data exploration above with logistic regression. Univariate Logistic Regression is a useful method to understand how each predictor variable interacts individually with the target (response) variable. Looking at various statistics, we determine which variable may impact our target the most.
   
-###Linear Regression Models  
-  
-```{r,echo=FALSE,warning=FALSE}
-lin_model <- subset(insi, TARGET_FLAG == 1)
-Var_lm <- c("TARGET_AMT","TARGET_FLAG","INCOME","TRAVTIME","BLUEBOOK","OLDCLAIM", "YOJ","intEDUCATION","intJOB","CAR_AGE")
-
-log_var <- c("TARGET_AMT","INCOME","BLUEBOOK","OLDCLAIM")
-
-log_lin_model <- lin_model[Var_lm]
-log_lin_model[log_var] <- log(log_lin_model[log_var])
-log_lin_model <- do.call(data.frame,lapply(log_lin_model, function(x) replace(x, is.infinite(x),0)))
-```
-
-```{r,echo=FALSE,warning=FALSE}
-model_ols <- lm(TARGET_AMT ~ INCOME + TRAVTIME + BLUEBOOK+
-                      OLDCLAIM + YOJ + intEDUCATION + intJOB + CAR_AGE, 
-                    data =lin_model)
-summary(model_ols)
-
-plot(fitted(model_ols), residuals(model_ols))
-
-wts <- 1/fitted(lm(abs(residuals(model_ols)) ~ fitted(model_ols)))^2
-
-length(wts)
-length(model_ols$residuals)
-model_wls <- lm(TARGET_AMT ~ INCOME + TRAVTIME + BLUEBOOK+
-                      OLDCLAIM + YOJ + intEDUCATION + intJOB + CAR_AGE, 
-                    data = lin_model, weights = wts)
-summary(model_wls)
-
-plot(fitted(model_wls), rstandard(model_wls))
-```
-
-
-
-```{r,echo=FALSE,warning=FALSE}
-log_model_ols <- lm(TARGET_AMT ~ INCOME + TRAVTIME + BLUEBOOK+
-                      OLDCLAIM + YOJ + intEDUCATION + intJOB + CAR_AGE, 
-                    data =log_lin_model)
-summary(log_model_ols)
-
-plot(fitted(log_model_ols), residuals(log_model_ols))
-
-wts <- 1/fitted(lm(abs(residuals(log_model_ols)) ~ fitted(log_model_ols)))^2
-
-length(wts)
-length(log_model_ols$residuals)
-log_model_wls <- lm(TARGET_AMT ~ INCOME + TRAVTIME + BLUEBOOK+
-                      OLDCLAIM + YOJ + intEDUCATION + intJOB + CAR_AGE, 
-                    data = log_lin_model, weights = wts)
-summary(log_model_wls)
-
-
-Parameters <- c("Accuracy", "Classification Error Rate", "Precision", "Sensitivity", "Specificity", "F1 Score")
-plot(fitted(log_model_wls), rstandard(log_model_wls))
-```
-
-```{r,echo=FALSE,warning=FALSE}
-backward <- step(model_wls)
-summary(backward)
-```
-
-
 ### Logistic Regression Model 
 
 In this model-and in all the models- we set aside 20% of the training data and use 80% to train the model we then use the model to predict the outcome of the remaining 20% of the data.  
@@ -536,6 +435,7 @@ train_ind <- sample(seq_len(nrow(insi)), size = smp_size)
 train <- insi[train_ind, ]
 test <- insi[-train_ind, ]
 ```
+
   
 In this scenario we attempt to create the simplest model possible by using only one variable - the one that provides the highest overall AUC (performance) by itself.  We calculate AUC for each variable separately and then select the highest result.  
   
@@ -594,16 +494,20 @@ for(i in models){
 kable(data.frame(var,p_val,aic,auc))
 ```
   
-We will derive our logistic regression model by stepping backward from using all candidate variables and arriving at the variable set that maximizes the AUC value.  
+  
+The highest AUC value obtained is .63, from the variable CLM_FREQ (Claim Frequency), indicating that clients with higher past claim incidents are more likely to have claims in the future.  However, .63 is not a long ways from .50, so this model is not very strong.    
+  
+  
+Next we will derive a logistic regression model by stepping backward from using all candidate variables and arriving at the variable set that maximizes the AUC value.  
   
 #### MODEL 1 - Backward regression starting with all variables
 ```{r,echo=FALSE,warning=FALSE}
 # Simple backward regression
-model_3 <- glm(TARGET_FLAG ~ .-TARGET_AMT-OLDCLAIM,family=binomial(link='logit'),data=train)
-model_3_backward <- step(model_3)
-summary(model_3_backward)
+model_1 <- glm(TARGET_FLAG ~ .-TARGET_AMT-OLDCLAIM,family=binomial(link='logit'),data=train)
+model_1_backward <- step(model_1)
+summary(model_1_backward)
 
-p <- predict(model_3_backward, newdata=subset(test,select=c(3:cols)), type="response")
+p <- predict(model_1_backward, newdata=subset(test,select=c(3:cols)), type="response")
 pr <- prediction(p, test$TARGET_FLAG)
 prf <- performance(pr, measure = "tpr", x.measure = "fpr")
 plot(prf)
@@ -615,14 +519,14 @@ auc <- auc@y.values[[1]]
 auc
 
 
-m3_prediction <- ifelse(p > 0.5, 1, 0)
-confusion_m3 <- confusionMatrix(data = m3_prediction, reference = test[,1])
-confusion_m3$table
+m1_prediction <- ifelse(p > 0.5, 1, 0)
+confusion_m1 <- confusionMatrix(data = m1_prediction, reference = test[,1])
+confusion_m1$table
 ```
   
 Our derived logistic regression model has a maximize AUC value of .79 with great p-values on all of the selected variables.  
   
-Below is table illustrating the various fitness parameters that describe the effectiveness of the logistic regression model.  All the models are good - from a practical perspective, there is no difference between them.  
+The table below illustrates the various fitness parameters that describe the effectiveness of the logistic regression model.  
 
 ```{r,echo=FALSE,warning=FALSE}
 # function to calculate the F1 score
@@ -632,13 +536,86 @@ f1 <- function(s,p) {
 
 Parameters <- c("Accuracy", "Classification Error Rate", "Precision", "Sensitivity", "Specificity", "F1 Score")
 
-Model3 <- c(confusion_m3$overall["Accuracy"], 1 - confusion_m3$overall["Accuracy"], confusion_m3$byClass["Pos Pred Value"], confusion_m3$byClass["Sensitivity"], confusion_m3$byClass["Specificity"], f1(confusion_m3$byClass["Sensitivity"],confusion_m3$byClass["Pos Pred Value"]))
+Model1 <- c(confusion_m1$overall["Accuracy"], 1 - confusion_m1$overall["Accuracy"], confusion_m1$byClass["Pos Pred Value"], confusion_m1$byClass["Sensitivity"], confusion_m1$byClass["Specificity"], f1(confusion_m1$byClass["Sensitivity"],confusion_m1$byClass["Pos Pred Value"]))
 
-model_summary <- data.frame(Parameters, Model3)
+model_summary <- data.frame(Parameters, Model1)
 
 kable(model_summary)
 ```
 
+###Linear Regression Models  
+
+For the linear regression model, we went ahead and attempted to produce several models to try and find the cost of repair based on several factors. Unlike in the Logistic Model, where we utilized all the variables and work backwards, for the linear approach we decided to limit to 8 variables, which most "intuitively" made sense to include when trying to predict cost. Certain variables, even when made into numeric values, just would not make any sense to predict cost. For instance, all binary data was eliminated from this model, it just didn't seem reasonable to predict a continous value using these independent variables. So, we started modeling from these Variables:
+"TARGET_FLAG","INCOME","TRAVTIME","BLUEBOOK", "YOJ","intEDUCATION","intJOB","CAR_AGE"
+
+Our first attempt at modelling will be to take a generic linear model with our two tranformed variables that we kept:
+
+```{r,echo=FALSE,warning=FALSE}
+lin_model <- subset(insi, TARGET_FLAG == 1)
+Var_lm <- c("TARGET_AMT","TARGET_FLAG","INCOME","TRAVTIME","BLUEBOOK", "YOJ","intEDUCATION","intJOB","CAR_AGE")
+```
+
+```{r,echo=FALSE,warning=FALSE}
+model_ols <- lm(TARGET_AMT ~ INCOME + TRAVTIME + BLUEBOOK+
+                    YOJ + intEDUCATION + intJOB + CAR_AGE, 
+                    data =lin_model)
+summary(model_ols)
+
+plot(fitted(model_ols), residuals(model_ols))
+```
+
+From the above, we can see that a straight linear model was not very effective at producing any results.
+
+Aside (Matt's point of view)- At this point, I had tried several different ways to mitigate the problem shown above, and that was that the only variable I saw of any signficance was the BLUEBOOK value. I tried different a differnt transformation type mostly of the log(TARGET_AMT) ~ log(Dependent Variables). I then tried several different weighting types like 1/SD and 1/fitted (shown below), but I still got the same results. Through entirely happenstance, as we were working off the same dataset, one of my compatriates overwrote the variables to transform only two variables with the log function, the TRAVTIME and BLUEBOOK variable. Since I left the code sitting there, lo and behold, the transformations of just those two skewed values changed the entire code. 
+
+```{r,echo=FALSE,warning=FALSE}
+wts <- 1/fitted(lm(abs(residuals(model_ols)) ~ fitted(model_ols)))^2
+
+#length(wts)
+#length(model_ols$residuals)
+model_wls <- lm(TARGET_AMT ~ INCOME + TRAVTIME + BLUEBOOK+
+                    YOJ + intEDUCATION + intJOB + CAR_AGE, 
+                    data = lin_model, weights = wts)
+summary(model_wls)
+plot(fitted(model_wls), residuals(model_wls))
+```
+
+Using this weighing value, which weights each variable according to $1/(fitted)^2$. As you can see from the p values and the $R^2$-values our model become much more approproate. Originally we were has a "goodness of fit" measure of 1% barely describing the variance in our model. With the weighting, we now have a much higher $R^2$. 
+  
+
+Originally, our model we were going to choose relied on the below, which used log transformations on most of the independent variables AND our independent variable. 
+```{r,echo=FALSE,warning=FALSE}
+log_var <- c("TARGET_AMT","INCOME")
+
+log_lin_model <- lin_model[Var_lm]
+log_lin_model[log_var] <- log(log_lin_model[log_var])
+log_lin_model <- do.call(data.frame,lapply(log_lin_model, function(x) replace(x, is.infinite(x),0)))
+log_model_ols <- lm(TARGET_AMT ~ INCOME + TRAVTIME + BLUEBOOK+
+                      YOJ + intEDUCATION + intJOB + CAR_AGE, 
+                    data =log_lin_model)
+
+summary(log_model_ols)
+
+plot(fitted(log_model_ols), residuals(log_model_ols))
+
+log_wts <- 1/fitted(lm(abs(residuals(log_model_ols)) ~ fitted(log_model_ols)))^2
+
+log_model_wls <- lm(TARGET_AMT ~ INCOME + TRAVTIME + BLUEBOOK+
+                    YOJ + intEDUCATION + intJOB + CAR_AGE, 
+                    data = log_lin_model, weights = log_wts)
+summary(log_model_wls)
+
+plot(fitted(log_model_wls), rstandard(log_model_wls))
+
+```
+
+As you can see from the statistical output, with a log transformed dependent variable, our model does not hold up. However, or F-statistic is much lower, and the reason for this, is that the F-statistic is not corrected for the weights. 
+
+
+```{r}
+backward <- step(model_wls)
+summary(backward)
+```
 \begin{center}
 {\huge Choose Model}
 \end{center}
@@ -648,7 +625,7 @@ kable(model_summary)
 ##Choose Model
 
 
-We would like to pick Backward logistic regression model to make prediction for the evaluation dataset (non-zero value). This model has accuracy rate as high as 80%. In the meantime, the precision and sensitivity are at the level of 82% and 92%, which indicate this model is very good at eliminating false negative and false positive situations. Both AUC and F1 Score are around 80%, which is also telling us that it has high accuracy in terms of predicting the final response variables.
+We chose the Backward logistic regression model to make our predictions for the evaluation dataset (non-zero value). This model has accuracy rate as high as 80%. In the meantime, the precision and sensitivity are at the level of 82% and 92%, which indicate this model is very good at eliminating false negative and false positive situations.  Both AUC and F1 Score are around 80%, which also indicates that it has high accuracy in terms of predicting the final response variables.
 
 
 ```{r, echo=FALSE, warning=FALSE}
@@ -715,15 +692,16 @@ eval_copy$HOME_VAL <- log(eval_copy$HOME_VAL)
 #model_3 <- glm(TARGET_FLAG ~ KIDSDRIV + INCOME + TIF + CLM_FREQ + MVR_PTS + blnPARENT1 + blnMSTATUS + blnCAR_USE + blnNOT_REVOKED + blnURBANICITY + intEDUCATION + intJOB + intCAR_TYPE + BLUEBOOK + TRAVTIME + HOME_VAL, family = binomial(link='logit'), data = train)
 #summary(model_3)
 
-p <- predict(model_3_backward, newdata=eval_copy, type = "response")
+p <- predict(model_1_backward, newdata=eval_copy, type = "response")
 
 eval_copy$TARGET_FLAG <- ifelse(p >= .50, 1, 0)
 
 ```
 
 
-For linear regression model, all the models we created only contain one variable, which is BLUEBOOK. According to the following summary statistics, none of the model is performing significantly better than the others. They have very similar p-value, mean squared error, r-squared, and F-statistics. The R-sqaured is very low, even the best model we have is only 1.63%, which might indicate our model lack validity. Or it could also indicate the claim amount of motor vehicle accident tends to be unpredictable.
-
+For linear regression model, we are showing the outputs of each of the 4 tests we had. M1 = straight LM with 2 transformations, m2 = weight lm, m3 = straight lm with log independent, m4 = same as previous but weighted. According to the following summary statistics, the weighted lm out performs all the others. As mentioned previously, the F-statistic is high, which might indicate our model lacks validity. Or it could also indicate the claim amount of motor vehicle accident tends to be unpredictable, and wit
+  
+#I got a out of bound error for m5, I do not know how to fix it. 
 
 ```{r, echo=FALSE, warning=FALSE}
 Parameters <- c("p-value", "Mean Squared Error", "R^2", "F-Statistics")
@@ -739,18 +717,25 @@ m4 <- c(summary(log_model_wls)$coef[4, "Pr(>|t|)"], mean(summary(log_model_wls)$
 #m5 <- c(summary(backward)$coef[4, "Pr(>|t|)"], mean(summary(backward)$residuals^2), summary(backward)$r.squared, summary(backward)$fstatistic[1])
 
 model_summary <- data.frame(Parameters, m1, m2, m3, m4)
-model_summary
+kable(model_summary)
 ```
 
 
 ```{r, echo=FALSE, warning=FALSE}
-#Build model based on the independent variable BLUEBOOK. Then predict the result for eval
+#Build model based on our weighted least square model with wts 
+linear_model <- lm(formula = TARGET_AMT ~ INCOME + TRAVTIME + BLUEBOOK + YOJ + 
+    intEDUCATION + intJOB + CAR_AGE, data = lin_model, weights = wts)
 
-linear_model <- lm(TARGET_AMT ~ BLUEBOOK, data = insi)
 summary(linear_model)
 eval_copy$TARGET_AMT <- predict(linear_model, newdata = eval_copy, type = "response")
 ```
 
+Below is the evaluation of the first 20 values on the evaluation test dataset. 
+```{r, echo=FALSE, warning=FALSE}
+kable(head(eval_copy[,c(1:8)], 20))
+kable(head(eval_copy[,c(9:16)], 20))
+kable(head(eval_copy[,c(17:length(insi))], 20))
+```
 
 ```{r, echo=FALSE, warning=FALSE}
 kable(head(eval_copy[,c(1:10)], 20))
