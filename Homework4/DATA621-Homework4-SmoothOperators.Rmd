@@ -58,8 +58,9 @@ The first steps in our process was to explore our data. During this exploration,
 
 
 Our next step was to change the categorical data into numeric values, which was accomplished using the following legend:
-
+\begin{center}
 ![](https://raw.githubusercontent.com/jeffreyburmood/data621/master/Homework4/New_Variables.png)
+\end{center}
 
 After that, we repaired the offending values, standardized the data types, and add new variables to quantitatively represent the binary and categorical choices available in the data:
 
