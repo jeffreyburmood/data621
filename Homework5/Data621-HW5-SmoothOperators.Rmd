@@ -1,0 +1,64 @@
+---
+title: "DATA621-HW5-SmoothOperators"
+author: "Rob Hodde, Matt Farris, Jeffrey Burmood, Bin Lin"
+date: "5/11/2017"
+output: pdf_document
+---
+
+###Problem Description  
+  
+Explore, analyze and model a data set containing information on approximately 12,000 commercially available wines. The variables are mostly related to the chemical properties of the wine being sold. The response variable is the number of sample cases of wine that were purchased by wine distribution companies after sampling a wine. These cases would be used to provide tasting samples to restaurants and wine stores around the United States. The more sample cases purchased, the more likely is a wine to be sold at a high end restaurant. A large wine manufacturer is studying the data in order to predict the number of wine cases ordered based upon the wine characteristics. If the wine manufacturer can predict the number of cases, then that manufacturer will be able to adjust their wine offering to maximize sales.  
+  
+The objective is to build a count regression model to predict the number of cases of wine that will be sold given certain properties of the wine.  
+  
+
+\begin{center}
+{\huge Data Exploration}
+\end{center}
+
+---
+
+##Data Exploration
+
+```{r,echo=FALSE}
+# Load required libraries
+suppressWarnings(suppressMessages(library(ggplot2)))
+suppressWarnings(suppressMessages(library(ROCR)))
+suppressWarnings(suppressMessages(library(RCurl)))
+suppressWarnings(suppressMessages(library(knitr)))
+suppressWarnings(suppressMessages(library(Hmisc)))
+suppressWarnings(suppressMessages(library(caret)))
+suppressWarnings(suppressMessages(library(stringr)))
+suppressWarnings(suppressMessages(library(mice)))
+suppressWarnings(suppressMessages(library(dplyr)))
+suppressWarnings(suppressMessages(library(reshape2)))
+
+#
+# Read in the dataset from github
+wine.raw <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/master/Homework5/wine-training-data.csv"),header=TRUE,na.strings=c(""," "), stringsAsFactors = FALSE)
+wine_eval <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/master/Homework4/wine-evaluation-data.csv"),header=TRUE,na.strings=c(""," "), stringsAsFactors = FALSE)
+# 
+# Perform some prelimiary data reformatting
+# set up TARGET as counts
+wine <- within(wine.raw, TARGET <- factor(TARGET, levels=min(TARGET):max(TARGET)))
+# get rid of the INDEX column since it's not used
+wine <- wine[2:length(wine)]
+#
+# Next, get a general look at the data
+# Let's start by exploring the type of each variable
+types <- sapply(1:length(wine),function(x) typeof(wine[,x]))
+types.df <- data.frame(VAR=names(wine),TYPE=types)
+kable(types.df)
+
+# Now generate some summary statistics
+kable(summary(wine[1:6]))
+kable(summary(wine[7:12]))
+kable(summary(wine[13:length(wine)]))
+#
+#
+# *********** There are variables with negative values that need to be addressed!
+# *********** There are variables with too many NAs that need to be addressed!
+
+```
+  
+
