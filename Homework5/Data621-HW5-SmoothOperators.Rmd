@@ -32,7 +32,7 @@ suppressWarnings(suppressMessages(library(stringr)))
 suppressWarnings(suppressMessages(library(mice)))
 suppressWarnings(suppressMessages(library(dplyr)))
 suppressWarnings(suppressMessages(library(reshape2)))
-
+suppressWarnings(suppressMessages(library(MASS)))
 #
 # Read in the dataset from github
 wine.raw <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/master/Homework5/wine-training-data.csv"),header=TRUE,na.strings=c(""," "), stringsAsFactors = FALSE)
@@ -62,3 +62,29 @@ kable(summary(wine[13:length(wine)]))
 ```
   
 
+```{r,echo=FALSE}
+wine_raw <- wine
+
+wine$STARS[is.na(wine$STARS)] <- 0 #replace missing STARS values with zero's.  (like saying "Not Rated")
+
+wine$TARGET <- as.numeric(as.character(wine$TARGET))
+
+set.seed(121)
+smp_size <- floor(0.80 * nrow(wine))
+train_rows <- sample(seq_len(nrow(wine)), size = smp_size)
+train <- wine[train_rows, ]
+test <- wine[-train_rows, ]
+
+pm <- glm(as.formula(paste(colnames(train)[1], "~", paste(colnames(train)[-1], collapse = "+"), sep = "")),data = train,family = poisson) 
+summary(pm)
+
+```
+
+```{r}
+pm2 <- glm(TARGET ~ STARS + LabelAppeal,data = train,family = poisson) 
+summary(pm2)
+```
+```{r}
+pm3 <- glm.nb(TARGET ~ STARS + LabelAppeal,data = train) 
+summary(pm3)
+```
