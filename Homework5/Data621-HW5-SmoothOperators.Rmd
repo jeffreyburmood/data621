@@ -60,7 +60,11 @@ kable(summary(wine[13:length(wine)]))
 # *********** There are variables with too many NAs that need to be addressed!
 
 ```
-  
+```{r}
+ggplot(wine, aes(TARGET, fill = STARS)) + geom_histogram(binwidth = 1, stat = "count") + facet_grid(STARS ~ 
+    ., margins = TRUE, scales = "free")
+```
+EDIT TO BE REMOVED: In the below examples, I took Rob's runs and extrapolated some Negative Binomial Regression to see if it greatly differed. From What I saw, it didn't, though I didnt compare the chi-sqaure test yet.  
 
 ```{r,echo=FALSE}
 wine_raw <- wine
@@ -87,4 +91,11 @@ summary(pm2)
 ```{r}
 pm3 <- glm.nb(TARGET ~ STARS + LabelAppeal,data = train) 
 summary(pm3)
+```
+
+
+```{r}
+pm4 <- glm.nb(TARGET ~ ., data = train)
+summary(pm4)
+pchisq(2 * (logLik(pm) - logLik(pm4)), df = 1, lower.tail = FALSE)
 ```
