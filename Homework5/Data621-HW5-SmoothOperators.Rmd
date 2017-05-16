@@ -59,10 +59,11 @@ kable(summary(wine[13:length(wine)]))
 # *********** There are variables with negative values that need to be addressed!
 # *********** There are variables with too many NAs that need to be addressed!
 
-```
-```{r}
-ggplot(wine, aes(TARGET, fill = STARS)) + geom_histogram(binwidth = 1, stat = "count") + facet_grid(STARS ~ 
-    ., margins = TRUE, scales = "free")
+
+#p <- ggplot(wine, aes(TARGET, fill = STARS)) + geom_histogram(stat="count") +
+#   facet_grid(STARS ~ ., margins = TRUE, scales = "free")
+
+(p)
 ```
 EDIT TO BE REMOVED: In the below examples, I took Rob's runs and extrapolated some Negative Binomial Regression to see if it greatly differed. From What I saw, it didn't, though I didnt compare the chi-sqaure test yet.  
 
