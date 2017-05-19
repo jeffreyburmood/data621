@@ -209,6 +209,10 @@ We have reduced the degrees-of-freedom from 16 down to 8 which is as far as we'l
 ###Regular Negative Binomial Model  
   
 ```{r,echo=FALSE}
+############### THIS IS REPLACED WITH BIN'S CODE ################
+########## PLEASE MAKE SURE THE NAME OF THE NEGATIVE BINOMIAL MODEL IS THE SAME IN LINE 227 BELOW #######
+nm <- glm.nb(TARGET ~ . ,data = train)
+############### THIS IS REPLACED WITH BIN'S CODE ################
 
 ```
   
@@ -216,20 +220,50 @@ NEED VERBIAGE - REGULAR NEGATIVE BINOMIAL MODEL
   
 ###Zero-inflated Negative Regession Model  
   
+We'll continue our exploration of the seemingly high number of zero cases in the TARGET count as seen in the previous histrogram. In this case, we'll see if the number of zeros observed is in line with the number of zeros predicted by the negative binomial model alone.  
+  
 ```{r,echo=FALSE}
-
-# now build the model and run the AIC step function as usual
-zp <- zeroinfl(formula=TARGET ~ ., data = wine, dist="negbin")
-
-
-# Do a goodness-of-fit test
-# Do a comparision with the regular negative binomial model !!!!!!!!!!
+# build observed and predicted counts for wine cases and plot the relationship
+highcnt <- max(wine$TARGET)
+zerocnt <- table(wine$TARGET)[1:highcnt]
+predcnt <- colSums(predprob(nm)[,1:highcnt])
+plot(predcnt,zerocnt,type='n',xlab="Predicted",ylab="Observed")
+text(predcnt,zerocnt,0:highcnt)
 
 ```
   
-NEED VERBIAGE - ZERO_INFLATED NEGATIVE BINOMIAL MODEL  
-  
+The number of observed zero cases and the predicted zero cases do not match up well so we'll move to look at the influence of the zero counts on the model by separating out the modeling of zero counts and the modeling of the non-zero counts.  
 
+Staying with our concepts of Perception and Chemistry, we will look treating the high number of zero counts using the Perception variables of STARS and LabelAppeal, and the non-zero counts will use all other variables as the Chemistry variables.  
+  
+```{r,echo=FALSE}
+
+# now build the model and run the AIC step function as usual
+zn <- zeroinfl(formula=TARGET ~ . - (STARS+LabelAppeal) | (STARS+LabelAppeal), data = wine, dist="negbin")
+summary(zn)
+
+# to perform a goodness test, generate a version using all of the variables
+zn2 <- zeroinfl(formula=TARGET ~ ., data = wine, dist="negbin")
+
+# prepare for a chi-squared test
+(lrt <- 2 * (zn2$loglik - zn$loglik))
+zn.chi <- (1-pchisq(lrt,as.integer(lrt)))
+print(paste("Chi-Square Test = ",zn.chi))
+
+```
+  
+Given the large p-value from the chi-square test, we conclude our model approach for Chemsitry vs Perception is valid.  
+  
+After analyzing the p-values for the Chemistry portion of the zero-inflated model, there are only 4 statistically significant variables: VolatileAcidity, Density, Alcohol, and AcidIndex. We'll re-reun the zero-inflated poission model with just these variables in the negative binomial portion.  
+  
+```{r,echo=FALSE}
+zn.simplified <- zeroinfl(formula=TARGET ~ (VolatileAcidity+Density+Alcohol+AcidIndex) -(STARS+LabelAppeal) | STARS+LabelAppeal, data = wine, dist="negbin")
+summary(zn.simplified)
+
+```
+  
+We have reduced the degrees-of-freedom from 17 down to 9 which is as far as we'll go with the zero-inflated negative binomial model.  
+  
 \begin{center}
 {\huge Select Models}
 \end{center}
