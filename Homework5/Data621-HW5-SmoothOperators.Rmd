@@ -19,7 +19,9 @@ The objective is to build a count regression model to predict the number of case
 ---
 
 ##Data Exploration
-
+  
+There are numerous NAs in certain variables, and variables with negative values. Variables with negative values have nearly normal distributions so it is possible some previous data adjustments have been made. The variable data with negative values in stable, normal distributions will be used as-is. Below is a summary of variables by type, followed by their basic statistical summaries:  
+  
 ```{r,echo=FALSE}
 # Load required libraries
 suppressWarnings(suppressMessages(library(ggplot2)))
@@ -70,14 +72,21 @@ ggplot(wine, aes(TARGET, fill = STARS)) + geom_bar(stat = "count") + facet_grid(
     ., margins = TRUE, scales = "free")
 
 ```
-
+  
+Lastly, we'll look at the whole distribution of counts for the TARGET variable.  
+  
+```{r,echo=FALSE}
+ggplot(wine, aes(TARGET)) + geom_bar(stat="count")
+```
+  
 \begin{center}
 {\huge Data Preparation}
 \end{center}
 
 
 ##Data Preparation  
-
+  
+We will cleanse the data by removing the index column, using the MICE package to replace NA's with meaningful values, and setting the unrated wines (no stars) to zero stars, so they can be analyzed quantitatively.  
   
 ```{r,echo=FALSE}
 
@@ -95,10 +104,11 @@ v <- length(f)
 #generate boxplots so we can visualize the level of normality of each variable
 par(mfcol=c(1,3))
 for (i in 1:v){boxplot(wine[,i],main = f[i])}
-
-# DO WE STILL NEED THIS IF WE DON:T CHANGE TO FACTORS???
-#wine$TARGET <- as.numeric(as.character(wine$TARGET))
-
+```
+  
+The final data preparation step is to split the training data into two portions, Train and Test.  We will use 80% of the data for training the model, and 20% for evaluation.  
+  
+```{r,echo=FALSE}
 # split the training dataset so that we have a test dataset to check modeling results against
 set.seed(121)
 smp_size <- floor(0.80 * nrow(wine))
@@ -106,12 +116,7 @@ train_rows <- sample(seq_len(nrow(wine)), size = smp_size)
 train <- wine[train_rows, ]
 test <- wine[-train_rows, ]
 
-pm <- glm(as.formula(paste(colnames(train)[1], "~", paste(colnames(train)[-1], collapse = "+"), sep = "")),data = train,family = poisson) 
-summary(pm)
-
 ```
-  
-NEED VERBIAGE - DATA PREPARATION  
   
 
 \begin{center}
@@ -120,28 +125,35 @@ NEED VERBIAGE - DATA PREPARATION
 
 
 ##Build Models  
-
+  
+By looking at these models we suspect there may be two forces at work.  The first we will call Perception.  The two Perception variables are Stars and Label Appeal.  Based on the high coefficients and high significance, Perception seems to impact the outcome much more than anything else.  The second force we will call Chemistry.  All the other variables could belong to this group.  The pattern we see here is that the best outcome (highest number of cases purchased) tends to occur when the Chemistry variables are close to the mean.    
+  
 ###Linear Regression Models  
   
 ```{r}
-#start with basic linear regression model for each variable individually (baseline)
-par(mfrow=c(2,3))
-for (i in 2:v){
-  plot(wine[,1] ~ wine[,i], xlab = f[i], ylab = f[1] )
-  m <- glm(as.formula(paste(colnames(wine)[1], "~", paste(colnames(wine)[i], collapse = "+"), sep = "")),data = wine, family=poisson()) 
-  abline(m,col="blue")
-}
 
-# create generalized linear model, poisson distribution.  this is for analyzing count data 
-pm <- lm(as.formula(paste(colnames(train)[1], "~", paste(colnames(train)[-1], collapse = "+"), sep = "")),data = train) 
-summary(pm)
 ```
   
 NEED VERBIAGE - LINEAR MODELS  
   
 ###Regular Poisson Model  
   
+Next we will create a generalized linear model, Poisson family, that combines all the variables:  
+  
 ```{r}
+# create generalized linear model, poisson distribution.  this is for analyzing count data 
+pm <- glm(as.formula(paste(colnames(train)[1], "~", paste(colnames(train)[-1], collapse = "+"), sep = "")),data = train,family=poisson()) 
+summary(pm)
+```
+  
+Here we see that the Perception variables have an outsize impact on the outcome.  
+  
+Let's create a Poisson model using only the two Perception variables:  
+  
+```{r}
+
+pm2 <- glm(TARGET ~ STARS + LabelAppeal,data = train,family=poisson()) 
+summary(pm2)
 
 ```
   
@@ -149,18 +161,50 @@ NEED VERBIAGE - REGULAR POISSION MODEL
   
 ###Zero-inflated Poisson Model  
   
+We next explore the seemingly high number of zero cases in the TARGET count as seen in the previous histrogram. We can easily see if the number of zeros observed is in line with the number of zeros predicted by the poission model alone.  
+  
 ```{r,echo=FALSE}
-
-# now build the model and run the AIC step function as usual
-zp <- zeroinfl(formula=TARGET ~ ., data = wine, dist="poisson")
-step(zp)
-
-# Do a goodness-of-fit test
-# Do a comparision with the regular poisson model !!!!!!!!!!
+# build observed and predicted counts for wine cases and plot the relationship
+highcnt <- max(wine$TARGET)
+zerocnt <- table(wine$TARGET)[1:highcnt]
+predcnt <- colSums(predprob(pm)[,1:highcnt])
+plot(predcnt,zerocnt,type='n',xlab="Predicted",ylab="Observed")
+text(predcnt,zerocnt,0:highcnt)
 
 ```
   
-NEED VERBIAGE - ZERO_INFLATED POISSON MODEL  
+The number of observed zero cases and the predicted zero cases do not match up well so we'll move to look at the influence of the zero counts on the model by separating out the modeling of zero counts and the modeling of the non-zero counts.  
+
+Staying with our concepts of Perception and Chemistry, we will look treating the high number of zero counts using the Perception variables of STARS and LabelAppeal, and the non-zero counts will use all other variables as the Chemistry variables.  
+  
+```{r,echo=FALSE}
+
+# now build the model and run the AIC step function as usual
+zp <- zeroinfl(formula=TARGET ~ . -(STARS+LabelAppeal) | STARS+LabelAppeal, data = wine, dist="poisson")
+summary(zp)
+
+# to perform a goodness test, generate a version using all of the variables
+zp2 <- zeroinfl(formula=TARGET ~ ., data = wine, dist="poisson")
+
+# prepare for a chi-squared test
+(lrt <- 2 * (zp2$loglik - zp$loglik))
+zp.chi <- (1-pchisq(lrt,as.integer(lrt)))
+print(paste("Chi-Square Test = ",zp.chi))
+
+```
+  
+Given the large p-value from the chi-square test, we conclude our model approach for Chemsitry vs Perception is valid.  
+  
+After analyzing the p-values for the Chemistry portion of the zero-inflated model, there are only 4 statistically significant variables: VolatileAcidity, Density, Alcohol, and AcidIndex. We'll re-reun the zero-inflated poission model with just these variables in the poission portion.  
+  
+```{r,echo=FALSE}
+zp.simplified <- zeroinfl(formula=TARGET ~ (VolatileAcidity+Density+Alcohol+AcidIndex) -(STARS+LabelAppeal) | STARS+LabelAppeal, data = wine, dist="poisson")
+summary(zp.simplified)
+
+```
+  
+We have reduced the degrees-of-freedom from 16 down to 8 which is as far as we'll go with the zero-inflated poission model.  
+  
   
 ###Regular Negative Binomial Model  
   
@@ -176,7 +220,7 @@ NEED VERBIAGE - REGULAR NEGATIVE BINOMIAL MODEL
 
 # now build the model and run the AIC step function as usual
 zp <- zeroinfl(formula=TARGET ~ ., data = wine, dist="negbin")
-step(zp)
+
 
 # Do a goodness-of-fit test
 # Do a comparision with the regular negative binomial model !!!!!!!!!!
