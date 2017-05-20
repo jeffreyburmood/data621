@@ -2,7 +2,7 @@
 title: "DATA621-HW5-SmoothOperators"
 author: "Rob Hodde, Matt Farris, Jeffrey Burmood, Bin Lin"
 date: "5/11/2017"
-output: html_document
+output: pdf_document
 ---
 
 ###Problem Description  
@@ -23,7 +23,6 @@ There are numerous NAs in certain variables, and variables with negative values.
 ```{r,echo=FALSE}
 # Load required libraries
 
-#install.packages("pscl")
 suppressWarnings(suppressMessages(library(ggplot2)))
 suppressWarnings(suppressMessages(library(ROCR)))
 suppressWarnings(suppressMessages(library(RCurl)))
@@ -42,9 +41,6 @@ suppressWarnings(suppressMessages(library(lmtest)))
 # Read in the dataset from github
 wine.raw <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/master/Homework5/wine-training-data.csv"),header=TRUE,na.strings=c(""," "), stringsAsFactors = FALSE)
 wine_eval <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/master/Homework5/wine-evaluation-data.csv"),header=TRUE,na.strings=c(""," "), stringsAsFactors = FALSE)
-
-#head(wine_eval)
-#View(wine.raw)
 
 # get rid of the INDEX column since it's not used
 wine <- wine.raw[2:length(wine.raw)]
