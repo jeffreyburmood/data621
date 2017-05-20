@@ -15,15 +15,15 @@ The objective is to build a count regression model to predict the number of case
 \begin{center}
 {\huge Data Exploration}
 \end{center}
-
----
-
+  
 ##Data Exploration
   
 There are numerous NAs in certain variables, and variables with negative values. Variables with negative values have nearly normal distributions so it is possible some previous data adjustments have been made. The variable data with negative values in stable, normal distributions will be used as-is. Below is a summary of variables by type, followed by their basic statistical summaries:  
   
 ```{r,echo=FALSE}
 # Load required libraries
+
+#install.packages("pscl")
 suppressWarnings(suppressMessages(library(ggplot2)))
 suppressWarnings(suppressMessages(library(ROCR)))
 suppressWarnings(suppressMessages(library(RCurl)))
@@ -36,11 +36,15 @@ suppressWarnings(suppressMessages(library(dplyr)))
 suppressWarnings(suppressMessages(library(reshape2)))
 suppressWarnings(suppressMessages(library(MASS)))
 suppressWarnings(suppressMessages(library(pscl)))
-#
+suppressWarnings(suppressMessages(library(broom)))
+suppressWarnings(suppressMessages(library(lmtest)))
+
 # Read in the dataset from github
 wine.raw <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/master/Homework5/wine-training-data.csv"),header=TRUE,na.strings=c(""," "), stringsAsFactors = FALSE)
-wine_eval <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/master/Homework4/wine-evaluation-data.csv"),header=TRUE,na.strings=c(""," "), stringsAsFactors = FALSE)
-# 
+wine_eval <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/master/Homework5/wine-evaluation-data.csv"),header=TRUE,na.strings=c(""," "), stringsAsFactors = FALSE)
+
+#head(wine_eval)
+#View(wine.raw)
 
 # get rid of the INDEX column since it's not used
 wine <- wine.raw[2:length(wine.raw)]
@@ -58,15 +62,11 @@ kable(summary(wine[13:length(wine)]))
 
 ```
   
-NEED VERBIAGE - DATA EXPLORATION: There are numerous NAs in certain variables, and variables with negative values. Variables with negative values have apparently normal distributions so it's possible some previous data adjustments have been made. The variable data with negative values in stable, normal distributions will be used as-is.
-
-NEED TO EXPLORE MEAN AND VARIANCE OF OUTCOME VARIABLE. POISSON PROBABLITY MASS FUNCTION
-
-NEED TARGET COUNT HISTOGRAM, NOT ORGANIZED BY STARS.
+There are numerous NAs in certain variables, and variables with negative values. Variables with negative values have apparently normal distributions so it's possible some previous data adjustments have been made. The variable data with negative values in stable, normal distributions will be used as-is.
   
 Clean data by removing unnecessary columns, replacing NA's, and setting the unrated wines (no stars) to zero stars, so they can be analyzed.  
   
-
+  
 ```{r}
 ggplot(wine, aes(TARGET, fill = STARS)) + geom_bar(stat = "count") + facet_grid(STARS ~ 
     ., margins = TRUE, scales = "free")
@@ -89,8 +89,6 @@ ggplot(wine, aes(TARGET)) + geom_bar(stat="count")
 We will cleanse the data by removing the index column, using the MICE package to replace NA's with meaningful values, and setting the unrated wines (no stars) to zero stars, so they can be analyzed quantitatively.  
   
 ```{r,echo=FALSE}
-
-#
 # replace missing STARS values with zero's.  (like saying "Not Rated")
 wine$STARS[is.na(wine$STARS)] <- 0 
 
@@ -106,19 +104,7 @@ par(mfcol=c(1,3))
 for (i in 1:v){boxplot(wine[,i],main = f[i])}
 ```
   
-The final data preparation step is to split the training data into two portions, Train and Test.  We will use 80% of the data for training the model, and 20% for evaluation.  
   
-```{r,echo=FALSE}
-# split the training dataset so that we have a test dataset to check modeling results against
-set.seed(121)
-smp_size <- floor(0.80 * nrow(wine))
-train_rows <- sample(seq_len(nrow(wine)), size = smp_size)
-train <- wine[train_rows, ]
-test <- wine[-train_rows, ]
-
-```
-  
-
 \begin{center}
 {\huge Build Models}
 \end{center}
@@ -128,21 +114,13 @@ test <- wine[-train_rows, ]
   
 By looking at these models we suspect there may be two forces at work.  The first we will call Perception.  The two Perception variables are Stars and Label Appeal.  Based on the high coefficients and high significance, Perception seems to impact the outcome much more than anything else.  The second force we will call Chemistry.  All the other variables could belong to this group.  The pattern we see here is that the best outcome (highest number of cases purchased) tends to occur when the Chemistry variables are close to the mean.    
   
-###Linear Regression Models  
-  
-```{r}
-
-```
-  
-NEED VERBIAGE - LINEAR MODELS  
-  
 ###Regular Poisson Model  
   
 Next we will create a generalized linear model, Poisson family, that combines all the variables:  
   
 ```{r}
 # create generalized linear model, poisson distribution.  this is for analyzing count data 
-pm <- glm(as.formula(paste(colnames(train)[1], "~", paste(colnames(train)[-1], collapse = "+"), sep = "")),data = train,family=poisson()) 
+pm <- glm(as.formula(paste(colnames(wine)[1], "~", paste(colnames(wine)[-1], collapse = "+"), sep = "")),data = wine,family=poisson()) 
 summary(pm)
 ```
   
@@ -152,13 +130,12 @@ Let's create a Poisson model using only the two Perception variables:
   
 ```{r}
 
-pm2 <- glm(TARGET ~ STARS + LabelAppeal,data = train,family=poisson()) 
+pm2 <- glm(TARGET ~ STARS + LabelAppeal,data = wine,family=poisson()) 
 summary(pm2)
 
 ```
   
-NEED VERBIAGE - REGULAR POISSION MODEL  
-  
+    
 ###Zero-inflated Poisson Model  
   
 We next explore the seemingly high number of zero cases in the TARGET count as seen in the previous histrogram. We can easily see if the number of zeros observed is in line with the number of zeros predicted by the poission model alone.  
@@ -205,20 +182,18 @@ summary(zp.simplified)
   
 We have reduced the degrees-of-freedom from 16 down to 8 which is as far as we'll go with the zero-inflated poission model.  
   
-  
 ###Regular Negative Binomial Model  
   
+For regular negative binomial model, we start with all the dependent variables, and perform backward stepwise algorythm. Initially, we have 14 dependent variables, we get it down to 10 variables. The AIC is 37306.  
+  
 ```{r,echo=FALSE}
-############### THIS IS REPLACED WITH BIN'S CODE ################
-########## PLEASE MAKE SURE THE NAME OF THE NEGATIVE BINOMIAL MODEL IS THE SAME IN LINE 227 BELOW #######
-nm <- glm.nb(TARGET ~ . ,data = train)
-############### THIS IS REPLACED WITH BIN'S CODE ################
-
+nb_backward <- suppressWarnings(suppressMessages(glm.nb(TARGET ~ ., data = wine)))
+nb_backward <- suppressWarnings(suppressMessages(step(nb_backward, trace = 0)))
+summary(nb_backward)
+plot(fitted(nb_backward), residuals(nb_backward))
 ```
   
-NEED VERBIAGE - REGULAR NEGATIVE BINOMIAL MODEL  
-  
-###Zero-inflated Negative Regession Model  
+###Zero-inflated Negative Binomial Regession Model  
   
 We'll continue our exploration of the seemingly high number of zero cases in the TARGET count as seen in the previous histrogram. In this case, we'll see if the number of zeros observed is in line with the number of zeros predicted by the negative binomial model alone.  
   
@@ -226,7 +201,7 @@ We'll continue our exploration of the seemingly high number of zero cases in the
 # build observed and predicted counts for wine cases and plot the relationship
 highcnt <- max(wine$TARGET)
 zerocnt <- table(wine$TARGET)[1:highcnt]
-predcnt <- colSums(predprob(nm)[,1:highcnt])
+predcnt <- colSums(predprob(nb_backward)[,1:highcnt])
 plot(predcnt,zerocnt,type='n',xlab="Predicted",ylab="Observed")
 text(predcnt,zerocnt,0:highcnt)
 
@@ -259,7 +234,6 @@ After analyzing the p-values for the Chemistry portion of the zero-inflated mode
 ```{r,echo=FALSE}
 zn.simplified <- zeroinfl(formula=TARGET ~ (VolatileAcidity+Density+Alcohol+AcidIndex) -(STARS+LabelAppeal) | STARS+LabelAppeal, data = wine, dist="negbin")
 summary(zn.simplified)
-
 ```
   
 We have reduced the degrees-of-freedom from 17 down to 9 which is as far as we'll go with the zero-inflated negative binomial model.  
@@ -267,15 +241,13 @@ We have reduced the degrees-of-freedom from 17 down to 9 which is as far as we'l
 \begin{center}
 {\huge Select Models}
 \end{center}
+  
+###Linear Regression Models:
 
-
-Linear Model: 
-
-Lastly we are going to look at a regular linear model, as a comparison to the data shown above. Again we are going to compare Science vs. Perception, to see if there is any relationship between chemisty. 
+Lastly we are going to look at a regular linear model, as a comparison to the data shown above. Again we are going to compare Chemistry vs. Perception, to see if there is any relationship between chemisty. 
 
 ```{r}
-
-lin.mod.perc <- lm(TARGET ~ . - STARS - LabelAppeal,data = train) 
+lin.mod.perc <- lm(TARGET ~ . - STARS - LabelAppeal,data = wine) 
 summary(lin.mod.perc)
 ```
 
@@ -289,41 +261,91 @@ lin.mod.back <- step(lin.mod.perc)
 ```{r}
 lin.mod.back <- lm(TARGET ~ VolatileAcidity + Chlorides + FreeSulfurDioxide + 
     TotalSulfurDioxide + Density + pH + Sulphates + Alcohol + 
-    AcidIndex, data = train)
+    AcidIndex, data = wine)
 summary(lin.mod.back)
 ```
-Comparing this to just the appeal data we can see the following: 
+Comparing this to just the perception data we can see the following: 
 
 ```{r}
-lin.mod.app <- lm(TARGET ~ STARS + LabelAppeal,data = train) 
+lin.mod.app <- lm(TARGET ~ STARS + LabelAppeal,data = wine) 
 summary(lin.mod.app)
 ```
 
-From the the models, we can clearly see that the appeal data was a much more appropriate fit. This can be seen through the R-Squared value, which shows that the appeal model explains roughly 50% of the variance in the model. This is a pretty "good-fit." Using the "science" data, we also se a significant model, however, the fit is much worse, with practical none of the variance explained. 
+From the the models, we can clearly see that the perception data was a much more appropriate fit. This can be seen through the R-Squared value, which shows that the perception model explains roughly 50% of the variance in the model. This is a pretty "good-fit." Using the chemistry data, we also se a significant model, however, the fit is much worse, with practical none of the variance explained. 
 
 Checking the residuals we can see the following: 
 
 
-Science model:
+Chemistry model:
 ```{r}
 plot(lin.mod.back)
 ```
 
-Appeal Model:
+Perception Model:
 ```{r}
 plot(lin.mod.app)
 ```
 
-
-From the above, we can clearly see that the first "science" model shows clear patterns in the residuals, which indicates that linear modeling is not at all a good choice for those particular variables. However, just using the appeal variables we see a much better picture, with a more uniformed residual distribution, and no clear patterns that would suggest another choice in models. 
-
+From the above, we can clearly see that the first chemistry model shows clear patterns in the residuals, which indicates that linear modeling is not at all a good choice for those particular variables. However, just using the perception variables we see a much better picture, with a more uniformed residual distribution, and no clear patterns that would suggest another choice in models. 
 
 ##Select Models  
   
+  
+When we compare all our regular models first, we built a dataframe which contains all the performance parameter of the models. Out of the four regular models, it is easy to notice that regular linear model with focuse on perception is the best model. It has the lowest AIC and BIC. The Log-Likelihood is also the highest among the four. 
+
 ```{r,echo=FALSE}
 
+m1 <- glance(pm2)
+m2 <- glance(nb_backward)
+m3 <- glance(lin.mod.back)
+m4 <- glance(lin.mod.app)
+
+m1
+m2
+m3
+m4
+
+#Compare non-zero inflated models
+Models = c("Regular Poisson", "Regular Negative Binomial", "Regular Linear Science", "Regular Linear Perception")
+AIC = c(m1$AIC, m2$AIC, m3$AIC, m4$AIC)
+BIC = c(m1$BIC, m2$BIC, m3$BIC, m4$BIC)
+LogLik = c(m1$logLik, m2$logLik, m3$logLik, m4$logLik)
+Deviance = c(m1$deviance, m2$deviance, m3$deviance, m4$deviance)
+df.residual = c(m1$df.residual, m2$df.residual, m3$df.residual, m4$df.residual)
+
+any_but_zeroinflated <- data.frame(Models, AIC, BIC, LogLik, Deviance, df.residual)
+any_but_zeroinflated
 ```
   
-NEED VERBIAGE - SELECT MODELS  
   
+When we compare two zero-inflated models, the following code is telling us that zero inflated poisson model might be a better model, althought the statistics does not show the differences are statistically significant. But zero inflated poisson model still has one lower degree of freedom. 
+```{r}
+#Compare two zero-inflated models
+lmtest::lrtest(zn.simplified, zp.simplified)
+```
+  
+By comparing regular linear model with focus on perception with zero inflated poisson model, we end up with the model we want to use for our final evaluation. 
+```{r}
+#Compare zero inflated poisson model with regular linear model perception focused. 
+boxplot(abs(resid(lin.mod.app) - resid(zp.simplified)))
+hist(fitted(lin.mod.app))
+hist(fitted(zp.simplified))
+```
+  
+The following code is just the data preparation step for the evaluation dataset, before we apply our model.
+```{r}
+wine_eval <- wine_eval[2:length(wine_eval)]
+wine_eval$STARS[is.na(wine_eval$STARS)] <- 0 
+wine_eval <- mice(wine_eval, m = 3, print=F)
+wine_eval <- complete(wine_eval,1)
+```
+  
+This is our final predicted results.   
+```{r}
+wine_eval$TARGET <- predict(zp.simplified, newdata = wine_eval, type = "response")
+head(wine_eval, 20)
+```
+  
+
 Smooth Operators - All Done!  
+
