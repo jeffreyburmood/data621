@@ -268,6 +268,56 @@ We have reduced the degrees-of-freedom from 17 down to 9 which is as far as we'l
 {\huge Select Models}
 \end{center}
 
+
+Linear Model: 
+
+Lastly we are going to look at a regular linear model, as a comparison to the data shown above. Again we are going to compare Science vs. Perception, to see if there is any relationship between chemisty. 
+
+```{r}
+
+lin.mod.perc <- lm(TARGET ~ . - STARS - LabelAppeal,data = train) 
+summary(lin.mod.perc)
+```
+
+
+We can see not all the chemistry variables are significant, using backward stepwise, we can narrow down the insignificant independent variables. This produced the following forumula for  
+
+```{r}
+lin.mod.back <- step(lin.mod.perc)
+```
+
+```{r}
+lin.mod.back <- lm(TARGET ~ VolatileAcidity + Chlorides + FreeSulfurDioxide + 
+    TotalSulfurDioxide + Density + pH + Sulphates + Alcohol + 
+    AcidIndex, data = train)
+summary(lin.mod.back)
+```
+Comparing this to just the appeal data we can see the following: 
+
+```{r}
+lin.mod.app <- lm(TARGET ~ STARS + LabelAppeal,data = train) 
+summary(lin.mod.app)
+```
+
+From the the models, we can clearly see that the appeal data was a much more appropriate fit. This can be seen through the R-Squared value, which shows that the appeal model explains roughly 50% of the variance in the model. This is a pretty "good-fit." Using the "science" data, we also se a significant model, however, the fit is much worse, with practical none of the variance explained. 
+
+Checking the residuals we can see the following: 
+
+
+Science model:
+```{r}
+plot(lin.mod.back)
+```
+
+Appeal Model:
+```{r}
+plot(lin.mod.app)
+```
+
+
+From the above, we can clearly see that the first "science" model shows clear patterns in the residuals, which indicates that linear modeling is not at all a good choice for those particular variables. However, just using the appeal variables we see a much better picture, with a more uniformed residual distribution, and no clear patterns that would suggest another choice in models. 
+
+
 ##Select Models  
   
 ```{r,echo=FALSE}
