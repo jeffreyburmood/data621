@@ -1,0 +1,45 @@
+---
+title: "DATA621-Final-SmoothOperators"
+author: "Rob Hodde, Matt Farris, Jeffrey Burmood, Bin Lin"
+date: "5/11/2017"
+output: pdf_document
+---
+
+  
+```{r,echo=FALSE}
+# Load required libraries
+
+suppressWarnings(suppressMessages(library(ggplot2)))
+suppressWarnings(suppressMessages(library(ROCR)))
+suppressWarnings(suppressMessages(library(RCurl)))
+suppressWarnings(suppressMessages(library(knitr)))
+suppressWarnings(suppressMessages(library(Hmisc)))
+suppressWarnings(suppressMessages(library(caret)))
+suppressWarnings(suppressMessages(library(stringr)))
+suppressWarnings(suppressMessages(library(mice)))
+suppressWarnings(suppressMessages(library(dplyr)))
+suppressWarnings(suppressMessages(library(reshape2)))
+suppressWarnings(suppressMessages(library(MASS)))
+suppressWarnings(suppressMessages(library(pscl)))
+suppressWarnings(suppressMessages(library(broom)))
+suppressWarnings(suppressMessages(library(lmtest)))
+
+# Read in the dataset from github
+wine.raw <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/master/Homework5/wine-training-data.csv"),header=TRUE,na.strings=c(""," "), stringsAsFactors = FALSE)
+
+
+# get rid of the INDEX column since it's not used
+wine <- wine.raw[2:length(wine.raw)]
+
+# Let's start by exploring the type of each variable
+types <- sapply(1:length(wine),function(x) typeof(wine[,x]))
+types.df <- data.frame(VAR=names(wine),TYPE=types)
+kable(types.df)
+
+# Now generate some summary statistics
+kable(summary(wine[1:6]))
+kable(summary(wine[7:12]))
+kable(summary(wine[13:length(wine)]))
+#
+
+```
