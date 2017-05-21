@@ -1,0 +1,881 @@
+\documentclass[]{article}
+\usepackage{lmodern}
+\usepackage{amssymb,amsmath}
+\usepackage{ifxetex,ifluatex}
+\usepackage{fixltx2e} % provides \textsubscript
+\ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0 % if pdftex
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+\else % if luatex or xelatex
+  \ifxetex
+    \usepackage{mathspec}
+  \else
+    \usepackage{fontspec}
+  \fi
+  \defaultfontfeatures{Ligatures=TeX,Scale=MatchLowercase}
+\fi
+% use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+% use microtype if available
+\IfFileExists{microtype.sty}{%
+\usepackage{microtype}
+\UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\hypersetup{unicode=true,
+            pdftitle={DATA621-HW5-SmoothOperators},
+            pdfauthor={Rob Hodde, Matt Farris, Jeffrey Burmood, Bin Lin},
+            pdfborder={0 0 0},
+            breaklinks=true}
+\urlstyle{same}  % don't use monospace font for urls
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{{#1}}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{{#1}}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{{#1}}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{{#1}}}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{{#1}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{{#1}}}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{{#1}}}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{{#1}}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{{#1}}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{{#1}}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{{#1}}}
+\newcommand{\ImportTok}[1]{{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{{#1}}}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{{#1}}}}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{{#1}}}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{{#1}}}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{{#1}}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{{#1}}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{{#1}}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{{#1}}}}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{{#1}}}}
+\newcommand{\BuiltInTok}[1]{{#1}}
+\newcommand{\ExtensionTok}[1]{{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.77,0.63,0.00}{{#1}}}
+\newcommand{\RegionMarkerTok}[1]{{#1}}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{{#1}}}}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{{#1}}}}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{{#1}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{{#1}}}}
+\newcommand{\NormalTok}[1]{{#1}}
+\usepackage{longtable,booktabs}
+\usepackage{graphicx,grffile}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+\IfFileExists{parskip.sty}{%
+\usepackage{parskip}
+}{% else
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt plus 2pt minus 1pt}
+}
+\setlength{\emergencystretch}{3em}  % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{0}
+% Redefines (sub)paragraphs to behave more like sections
+\ifx\paragraph\undefined\else
+\let\oldparagraph\paragraph
+\renewcommand{\paragraph}[1]{\oldparagraph{#1}\mbox{}}
+\fi
+\ifx\subparagraph\undefined\else
+\let\oldsubparagraph\subparagraph
+\renewcommand{\subparagraph}[1]{\oldsubparagraph{#1}\mbox{}}
+\fi
+
+%%% Use protect on footnotes to avoid problems with footnotes in titles
+\let\rmarkdownfootnote\footnote%
+\def\footnote{\protect\rmarkdownfootnote}
+
+%%% Change title format to be more compact
+\usepackage{titling}
+
+% Create subtitle command for use in maketitle
+\newcommand{\subtitle}[1]{
+  \posttitle{
+    \begin{center}\large#1\end{center}
+    }
+}
+
+\setlength{\droptitle}{-2em}
+  \title{DATA621-HW5-SmoothOperators}
+  \pretitle{\vspace{\droptitle}\centering\huge}
+  \posttitle{\par}
+  \author{Rob Hodde, Matt Farris, Jeffrey Burmood, Bin Lin}
+  \preauthor{\centering\large\emph}
+  \postauthor{\par}
+  \predate{\centering\large\emph}
+  \postdate{\par}
+  \date{5/11/2017}
+
+
+\begin{document}
+\maketitle
+
+\subsubsection{Problem Description}\label{problem-description}
+
+Explore, analyze and model a data set containing information on
+approximately 12,000 commercially available wines. The variables are
+mostly related to the chemical properties of the wine being sold. The
+response variable is the number of sample cases of wine that were
+purchased by wine distribution companies after sampling a wine. These
+cases would be used to provide tasting samples to restaurants and wine
+stores around the United States. The more sample cases purchased, the
+more likely is a wine to be sold at a high end restaurant. A large wine
+manufacturer is studying the data in order to predict the number of wine
+cases ordered based upon the wine characteristics. If the wine
+manufacturer can predict the number of cases, then that manufacturer
+will be able to adjust their wine offering to maximize sales.
+
+The objective is to build a count regression model to predict the number
+of cases of wine that will be sold given certain properties of the wine.
+
+\begin{center}
+{\huge Data Exploration}
+\end{center}
+
+\begin{center}\rule{0.5\linewidth}{\linethickness}\end{center}
+
+\subsection{Data Exploration}\label{data-exploration}
+
+There are numerous NAs in certain variables, and variables with negative
+values. Variables with negative values have nearly normal distributions
+so it is possible some previous data adjustments have been made. The
+variable data with negative values in stable, normal distributions will
+be used as-is. Below is a summary of variables by type, followed by
+their basic statistical summaries:
+
+\begin{longtable}[]{@{}ll@{}}
+\toprule
+VAR & TYPE\tabularnewline
+\midrule
+\endhead
+TARGET & integer\tabularnewline
+FixedAcidity & double\tabularnewline
+VolatileAcidity & double\tabularnewline
+CitricAcid & double\tabularnewline
+ResidualSugar & double\tabularnewline
+Chlorides & double\tabularnewline
+FreeSulfurDioxide & double\tabularnewline
+TotalSulfurDioxide & double\tabularnewline
+Density & double\tabularnewline
+pH & double\tabularnewline
+Sulphates & double\tabularnewline
+Alcohol & double\tabularnewline
+LabelAppeal & integer\tabularnewline
+AcidIndex & integer\tabularnewline
+STARS & integer\tabularnewline
+\bottomrule
+\end{longtable}
+
+\begin{longtable}[]{@{}lcclclc@{}}
+\toprule
+& TARGET & FixedAcidity & VolatileAcidity & CitricAcid & ResidualSugar &
+Chlorides\tabularnewline
+\midrule
+\endhead
+& Min. :0.000 & Min. :-18.100 & Min. :-2.7900 & Min. :-3.2400 & Min.
+:-127.800 & Min. :-1.1710\tabularnewline
+& 1st Qu.:2.000 & 1st Qu.: 5.200 & 1st Qu.: 0.1300 & 1st Qu.: 0.0300 &
+1st Qu.: -2.000 & 1st Qu.:-0.0310\tabularnewline
+& Median :3.000 & Median : 6.900 & Median : 0.2800 & Median : 0.3100 &
+Median : 3.900 & Median : 0.0460\tabularnewline
+& Mean :3.029 & Mean : 7.076 & Mean : 0.3241 & Mean : 0.3084 & Mean :
+5.419 & Mean : 0.0548\tabularnewline
+& 3rd Qu.:4.000 & 3rd Qu.: 9.500 & 3rd Qu.: 0.6400 & 3rd Qu.: 0.5800 &
+3rd Qu.: 15.900 & 3rd Qu.: 0.1530\tabularnewline
+& Max. :8.000 & Max. : 34.400 & Max. : 3.6800 & Max. : 3.8600 & Max. :
+141.150 & Max. : 1.3510\tabularnewline
+& NA & NA & NA & NA & NA's :616 & NA's :638\tabularnewline
+\bottomrule
+\end{longtable}
+
+\begin{longtable}[]{@{}lllcccc@{}}
+\toprule
+& FreeSulfurDioxide & TotalSulfurDioxide & Density & pH & Sulphates &
+Alcohol\tabularnewline
+\midrule
+\endhead
+& Min. :-555.00 & Min. :-823.0 & Min. :0.8881 & Min. :0.480 & Min.
+:-3.1300 & Min. :-4.70\tabularnewline
+& 1st Qu.: 0.00 & 1st Qu.: 27.0 & 1st Qu.:0.9877 & 1st Qu.:2.960 & 1st
+Qu.: 0.2800 & 1st Qu.: 9.00\tabularnewline
+& Median : 30.00 & Median : 123.0 & Median :0.9945 & Median :3.200 &
+Median : 0.5000 & Median :10.40\tabularnewline
+& Mean : 30.85 & Mean : 120.7 & Mean :0.9942 & Mean :3.208 & Mean :
+0.5271 & Mean :10.49\tabularnewline
+& 3rd Qu.: 70.00 & 3rd Qu.: 208.0 & 3rd Qu.:1.0005 & 3rd Qu.:3.470 & 3rd
+Qu.: 0.8600 & 3rd Qu.:12.40\tabularnewline
+& Max. : 623.00 & Max. :1057.0 & Max. :1.0992 & Max. :6.130 & Max. :
+4.2400 & Max. :26.50\tabularnewline
+& NA's :647 & NA's :682 & NA & NA's :395 & NA's :1210 & NA's
+:653\tabularnewline
+\bottomrule
+\end{longtable}
+
+\begin{longtable}[]{@{}lccc@{}}
+\toprule
+& LabelAppeal & AcidIndex & STARS\tabularnewline
+\midrule
+\endhead
+& Min. :-2.000000 & Min. : 4.000 & Min. :1.000\tabularnewline
+& 1st Qu.:-1.000000 & 1st Qu.: 7.000 & 1st Qu.:1.000\tabularnewline
+& Median : 0.000000 & Median : 8.000 & Median :2.000\tabularnewline
+& Mean :-0.009066 & Mean : 7.773 & Mean :2.042\tabularnewline
+& 3rd Qu.: 1.000000 & 3rd Qu.: 8.000 & 3rd Qu.:3.000\tabularnewline
+& Max. : 2.000000 & Max. :17.000 & Max. :4.000\tabularnewline
+& NA & NA & NA's :3359\tabularnewline
+\bottomrule
+\end{longtable}
+
+NEED VERBIAGE - DATA EXPLORATION: There are numerous NAs in certain
+variables, and variables with negative values. Variables with negative
+values have apparently normal distributions so it's possible some
+previous data adjustments have been made. The variable data with
+negative values in stable, normal distributions will be used as-is.
+
+NEED TO EXPLORE MEAN AND VARIANCE OF OUTCOME VARIABLE. POISSON
+PROBABLITY MASS FUNCTION
+
+NEED TARGET COUNT HISTOGRAM, NOT ORGANIZED BY STARS.
+
+Clean data by removing unnecessary columns, replacing NA's, and setting
+the unrated wines (no stars) to zero stars, so they can be analyzed.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{ggplot}\NormalTok{(wine, }\KeywordTok{aes}\NormalTok{(TARGET, }\DataTypeTok{fill =} \NormalTok{STARS)) +}\StringTok{ }\KeywordTok{geom_bar}\NormalTok{(}\DataTypeTok{stat =} \StringTok{"count"}\NormalTok{) +}\StringTok{ }\KeywordTok{facet_grid}\NormalTok{(STARS ~}\StringTok{ }
+\StringTok{    }\NormalTok{., }\DataTypeTok{margins =} \OtherTok{TRUE}\NormalTok{, }\DataTypeTok{scales =} \StringTok{"free"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{Data621-HW5-SmoothOperators_files/figure-latex/unnamed-chunk-2-1.pdf}
+
+Lastly, we'll look at the whole distribution of counts for the TARGET
+variable.
+
+\includegraphics{Data621-HW5-SmoothOperators_files/figure-latex/unnamed-chunk-3-1.pdf}
+
+\begin{center}
+{\huge Data Preparation}
+\end{center}
+
+\subsection{Data Preparation}\label{data-preparation}
+
+We will cleanse the data by removing the index column, using the MICE
+package to replace NA's with meaningful values, and setting the unrated
+wines (no stars) to zero stars, so they can be analyzed quantitatively.
+
+\includegraphics{Data621-HW5-SmoothOperators_files/figure-latex/unnamed-chunk-4-1.pdf}
+\includegraphics{Data621-HW5-SmoothOperators_files/figure-latex/unnamed-chunk-4-2.pdf}
+\includegraphics{Data621-HW5-SmoothOperators_files/figure-latex/unnamed-chunk-4-3.pdf}
+\includegraphics{Data621-HW5-SmoothOperators_files/figure-latex/unnamed-chunk-4-4.pdf}
+\includegraphics{Data621-HW5-SmoothOperators_files/figure-latex/unnamed-chunk-4-5.pdf}
+
+The final data preparation step is to split the training data into two
+portions, Train and Test. We will use 80\% of the data for training the
+model, and 20\% for evaluation.
+
+\begin{center}
+{\huge Build Models}
+\end{center}
+
+\subsection{Build Models}\label{build-models}
+
+By looking at these models we suspect there may be two forces at work.
+The first we will call Perception. The two Perception variables are
+Stars and Label Appeal. Based on the high coefficients and high
+significance, Perception seems to impact the outcome much more than
+anything else. The second force we will call Chemistry. All the other
+variables could belong to this group. The pattern we see here is that
+the best outcome (highest number of cases purchased) tends to occur when
+the Chemistry variables are close to the mean.
+
+\subsubsection{Linear Regression Models}\label{linear-regression-models}
+
+NEED VERBIAGE - LINEAR MODELS
+
+\subsubsection{Regular Poisson Model}\label{regular-poisson-model}
+
+Next we will create a generalized linear model, Poisson family, that
+combines all the variables:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# create generalized linear model, poisson distribution.  this is for analyzing count data }
+\NormalTok{pm <-}\StringTok{ }\KeywordTok{glm}\NormalTok{(}\KeywordTok{as.formula}\NormalTok{(}\KeywordTok{paste}\NormalTok{(}\KeywordTok{colnames}\NormalTok{(train)[}\DecValTok{1}\NormalTok{], }\StringTok{"~"}\NormalTok{, }\KeywordTok{paste}\NormalTok{(}\KeywordTok{colnames}\NormalTok{(train)[-}\DecValTok{1}\NormalTok{], }\DataTypeTok{collapse =} \StringTok{"+"}\NormalTok{), }\DataTypeTok{sep =} \StringTok{""}\NormalTok{)),}\DataTypeTok{data =} \NormalTok{train,}\DataTypeTok{family=}\KeywordTok{poisson}\NormalTok{()) }
+\KeywordTok{summary}\NormalTok{(pm)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+## Call:
+## glm(formula = as.formula(paste(colnames(train)[1], "~", paste(colnames(train)[-1], 
+##     collapse = "+"), sep = "")), family = poisson(), data = train)
+## 
+## Deviance Residuals: 
+##     Min       1Q   Median       3Q      Max  
+## -2.9773  -0.7231   0.0640   0.5812   3.2465  
+## 
+## Coefficients:
+##                      Estimate Std. Error z value Pr(>|z|)    
+## (Intercept)         1.671e+00  2.186e-01   7.645 2.09e-14 ***
+## FixedAcidity       -2.378e-04  9.126e-04  -0.261  0.79447    
+## VolatileAcidity    -3.593e-02  7.325e-03  -4.905 9.32e-07 ***
+## CitricAcid          4.740e-03  6.566e-03   0.722  0.47036    
+## ResidualSugar       8.109e-05  1.685e-04   0.481  0.63032    
+## Chlorides          -4.492e-02  1.789e-02  -2.511  0.01202 *  
+## FreeSulfurDioxide   1.188e-04  3.811e-05   3.116  0.00183 ** 
+## TotalSulfurDioxide  7.965e-05  2.479e-05   3.213  0.00131 ** 
+## Density            -4.285e-01  2.145e-01  -1.998  0.04574 *  
+## pH                 -1.716e-02  8.439e-03  -2.033  0.04204 *  
+## Sulphates          -1.158e-02  6.113e-03  -1.895  0.05810 .  
+## Alcohol             1.924e-03  1.547e-03   1.243  0.21373    
+## LabelAppeal         1.331e-01  6.800e-03  19.574  < 2e-16 ***
+## AcidIndex          -8.640e-02  5.127e-03 -16.853  < 2e-16 ***
+## STARS               3.139e-01  5.076e-03  61.834  < 2e-16 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## (Dispersion parameter for poisson family taken to be 1)
+## 
+##     Null deviance: 18225  on 10235  degrees of freedom
+## Residual deviance: 11718  on 10221  degrees of freedom
+## AIC: 37313
+## 
+## Number of Fisher Scoring iterations: 5
+\end{verbatim}
+
+Here we see that the Perception variables have an outsize impact on the
+outcome.
+
+Let's create a Poisson model using only the two Perception variables:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{pm2 <-}\StringTok{ }\KeywordTok{glm}\NormalTok{(TARGET ~}\StringTok{ }\NormalTok{STARS +}\StringTok{ }\NormalTok{LabelAppeal,}\DataTypeTok{data =} \NormalTok{train,}\DataTypeTok{family=}\KeywordTok{poisson}\NormalTok{()) }
+\KeywordTok{summary}\NormalTok{(pm2)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+## Call:
+## glm(formula = TARGET ~ STARS + LabelAppeal, family = poisson(), 
+##     data = train)
+## 
+## Deviance Residuals: 
+##     Min       1Q   Median       3Q      Max  
+## -2.8887  -0.7644   0.0787   0.6151   3.2902  
+## 
+## Coefficients:
+##             Estimate Std. Error z value Pr(>|z|)    
+## (Intercept) 0.514677   0.011250   45.75   <2e-16 ***
+## STARS       0.331690   0.004969   66.75   <2e-16 ***
+## LabelAppeal 0.125219   0.006773   18.49   <2e-16 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## (Dispersion parameter for poisson family taken to be 1)
+## 
+##     Null deviance: 18225  on 10235  degrees of freedom
+## Residual deviance: 12107  on 10233  degrees of freedom
+## AIC: 37677
+## 
+## Number of Fisher Scoring iterations: 5
+\end{verbatim}
+
+NEED VERBIAGE - REGULAR POISSION MODEL
+
+\subsubsection{Zero-inflated Poisson
+Model}\label{zero-inflated-poisson-model}
+
+We next explore the seemingly high number of zero cases in the TARGET
+count as seen in the previous histrogram. We can easily see if the
+number of zeros observed is in line with the number of zeros predicted
+by the poission model alone.
+
+\includegraphics{Data621-HW5-SmoothOperators_files/figure-latex/unnamed-chunk-9-1.pdf}
+
+The number of observed zero cases and the predicted zero cases do not
+match up well so we'll move to look at the influence of the zero counts
+on the model by separating out the modeling of zero counts and the
+modeling of the non-zero counts.
+
+Staying with our concepts of Perception and Chemistry, we will look
+treating the high number of zero counts using the Perception variables
+of STARS and LabelAppeal, and the non-zero counts will use all other
+variables as the Chemistry variables.
+
+\begin{verbatim}
+## 
+## Call:
+## zeroinfl(formula = TARGET ~ . - (STARS + LabelAppeal) | STARS + 
+##     LabelAppeal, data = wine, dist = "poisson")
+## 
+## Pearson residuals:
+##     Min      1Q  Median      3Q     Max 
+## -1.9582 -0.4926  0.0434  0.5228  4.7813 
+## 
+## Count model coefficients (poisson with log link):
+##                      Estimate Std. Error z value Pr(>|z|)    
+## (Intercept)         1.854e+00  2.014e-01   9.204  < 2e-16 ***
+## FixedAcidity        2.545e-05  8.348e-04   0.030 0.975679    
+## VolatileAcidity    -2.355e-02  6.679e-03  -3.527 0.000421 ***
+## CitricAcid          4.492e-03  6.024e-03   0.746 0.455846    
+## ResidualSugar       5.501e-05  1.534e-04   0.359 0.719830    
+## Chlorides          -2.299e-02  1.639e-02  -1.402 0.160769    
+## FreeSulfurDioxide   3.319e-05  3.441e-05   0.964 0.334818    
+## TotalSulfurDioxide -2.623e-05  2.190e-05  -1.198 0.231018    
+## Density            -4.124e-01  1.978e-01  -2.085 0.037050 *  
+## pH                  8.162e-03  7.714e-03   1.058 0.290008    
+## Sulphates          -3.484e-03  5.598e-03  -0.622 0.533726    
+## Alcohol             9.185e-03  1.391e-03   6.600  4.1e-11 ***
+## AcidIndex          -2.974e-02  5.042e-03  -5.897  3.7e-09 ***
+## 
+## Zero-inflation model coefficients (binomial with logit link):
+##             Estimate Std. Error z value Pr(>|z|)    
+## (Intercept)  0.57364    0.03747   15.31   <2e-16 ***
+## STARS       -2.28614    0.05258  -43.48   <2e-16 ***
+## LabelAppeal  0.55892    0.03628   15.40   <2e-16 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1 
+## 
+## Number of iterations in BFGS optimization: 21 
+## Log-likelihood: -2.196e+04 on 16 Df
+\end{verbatim}
+
+\begin{verbatim}
+## [1] 3097.695
+\end{verbatim}
+
+\begin{verbatim}
+## [1] "Chi-Square Test =  0.493099438642364"
+\end{verbatim}
+
+Given the large p-value from the chi-square test, we conclude our model
+approach for Chemsitry vs Perception is valid.
+
+After analyzing the p-values for the Chemistry portion of the
+zero-inflated model, there are only 4 statistically significant
+variables: VolatileAcidity, Density, Alcohol, and AcidIndex. We'll
+re-reun the zero-inflated poission model with just these variables in
+the poission portion.
+
+\begin{verbatim}
+## 
+## Call:
+## zeroinfl(formula = TARGET ~ (VolatileAcidity + Density + Alcohol + 
+##     AcidIndex) - (STARS + LabelAppeal) | STARS + LabelAppeal, data = wine, 
+##     dist = "poisson")
+## 
+## Pearson residuals:
+##      Min       1Q   Median       3Q      Max 
+## -1.95868 -0.49219  0.04315  0.52731  4.79853 
+## 
+## Count model coefficients (poisson with log link):
+##                  Estimate Std. Error z value Pr(>|z|)    
+## (Intercept)      1.888537   0.199193   9.481  < 2e-16 ***
+## VolatileAcidity -0.023663   0.006677  -3.544 0.000394 ***
+## Density         -0.422251   0.197597  -2.137 0.032603 *  
+## Alcohol          0.009211   0.001390   6.625 3.46e-11 ***
+## AcidIndex       -0.029995   0.004978  -6.025 1.69e-09 ***
+## 
+## Zero-inflation model coefficients (binomial with logit link):
+##             Estimate Std. Error z value Pr(>|z|)    
+## (Intercept)  0.57368    0.03747   15.31   <2e-16 ***
+## STARS       -2.28633    0.05256  -43.50   <2e-16 ***
+## LabelAppeal  0.55920    0.03628   15.41   <2e-16 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1 
+## 
+## Number of iterations in BFGS optimization: 13 
+## Log-likelihood: -2.196e+04 on 8 Df
+\end{verbatim}
+
+We have reduced the degrees-of-freedom from 16 down to 8 which is as far
+as we'll go with the zero-inflated poission model.
+
+\subsubsection{Regular Negative Binomial
+Model}\label{regular-negative-binomial-model}
+
+\begin{verbatim}
+## Warning in theta.ml(Y, mu, sum(w), w, limit = control$maxit, trace =
+## control$trace > : iteration limit reached
+
+## Warning in theta.ml(Y, mu, sum(w), w, limit = control$maxit, trace =
+## control$trace > : iteration limit reached
+\end{verbatim}
+
+NEED VERBIAGE - REGULAR NEGATIVE BINOMIAL MODEL
+
+\subsubsection{Zero-inflated Negative Regession
+Model}\label{zero-inflated-negative-regession-model}
+
+We'll continue our exploration of the seemingly high number of zero
+cases in the TARGET count as seen in the previous histrogram. In this
+case, we'll see if the number of zeros observed is in line with the
+number of zeros predicted by the negative binomial model alone.
+
+\includegraphics{Data621-HW5-SmoothOperators_files/figure-latex/unnamed-chunk-13-1.pdf}
+
+The number of observed zero cases and the predicted zero cases do not
+match up well so we'll move to look at the influence of the zero counts
+on the model by separating out the modeling of zero counts and the
+modeling of the non-zero counts.
+
+Staying with our concepts of Perception and Chemistry, we will look
+treating the high number of zero counts using the Perception variables
+of STARS and LabelAppeal, and the non-zero counts will use all other
+variables as the Chemistry variables.
+
+\begin{verbatim}
+## 
+## Call:
+## zeroinfl(formula = TARGET ~ . - (STARS + LabelAppeal) | (STARS + 
+##     LabelAppeal), data = wine, dist = "negbin")
+## 
+## Pearson residuals:
+##      Min       1Q   Median       3Q      Max 
+## -1.95820 -0.49254  0.04336  0.52278  4.78158 
+## 
+## Count model coefficients (negbin with log link):
+##                      Estimate Std. Error z value Pr(>|z|)    
+## (Intercept)         1.854e+00  2.015e-01   9.203  < 2e-16 ***
+## FixedAcidity        2.592e-05  8.348e-04   0.031  0.97523    
+## VolatileAcidity    -2.356e-02  6.679e-03  -3.527  0.00042 ***
+## CitricAcid          4.491e-03  6.025e-03   0.745  0.45604    
+## ResidualSugar       5.502e-05  1.534e-04   0.359  0.71978    
+## Chlorides          -2.297e-02  1.639e-02  -1.401  0.16109    
+## FreeSulfurDioxide   3.322e-05  3.441e-05   0.965  0.33434    
+## TotalSulfurDioxide -2.617e-05  2.190e-05  -1.195  0.23219    
+## Density            -4.125e-01  1.978e-01  -2.086  0.03700 *  
+## pH                  8.198e-03  7.714e-03   1.063  0.28788    
+## Sulphates          -3.487e-03  5.598e-03  -0.623  0.53329    
+## Alcohol             9.194e-03  1.392e-03   6.607 3.92e-11 ***
+## AcidIndex          -2.973e-02  5.042e-03  -5.897 3.71e-09 ***
+## Log(theta)          1.129e+01  2.743e+00   4.114 3.88e-05 ***
+## 
+## Zero-inflation model coefficients (binomial with logit link):
+##             Estimate Std. Error z value Pr(>|z|)    
+## (Intercept)  0.57367    0.03747   15.31   <2e-16 ***
+## STARS       -2.28629    0.05258  -43.48   <2e-16 ***
+## LabelAppeal  0.55896    0.03628   15.40   <2e-16 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1 
+## 
+## Theta = 79668.6065 
+## Number of iterations in BFGS optimization: 38 
+## Log-likelihood: -2.196e+04 on 17 Df
+\end{verbatim}
+
+\begin{verbatim}
+## [1] 3097.96
+\end{verbatim}
+
+\begin{verbatim}
+## [1] "Chi-Square Test =  0.491755896277009"
+\end{verbatim}
+
+Given the large p-value from the chi-square test, we conclude our model
+approach for Chemsitry vs Perception is valid.
+
+After analyzing the p-values for the Chemistry portion of the
+zero-inflated model, there are only 4 statistically significant
+variables: VolatileAcidity, Density, Alcohol, and AcidIndex. We'll
+re-reun the zero-inflated poission model with just these variables in
+the negative binomial portion.
+
+\begin{verbatim}
+## 
+## Call:
+## zeroinfl(formula = TARGET ~ (VolatileAcidity + Density + Alcohol + 
+##     AcidIndex) - (STARS + LabelAppeal) | STARS + LabelAppeal, data = wine, 
+##     dist = "negbin")
+## 
+## Pearson residuals:
+##      Min       1Q   Median       3Q      Max 
+## -1.95868 -0.49220  0.04311  0.52729  4.79775 
+## 
+## Count model coefficients (negbin with log link):
+##                  Estimate Std. Error z value Pr(>|z|)    
+## (Intercept)      1.888501   0.199194   9.481  < 2e-16 ***
+## VolatileAcidity -0.023666   0.006677  -3.545 0.000393 ***
+## Density         -0.422102   0.197597  -2.136 0.032665 *  
+## Alcohol          0.009210   0.001390   6.625 3.48e-11 ***
+## AcidIndex       -0.030009   0.004978  -6.028 1.66e-09 ***
+## Log(theta)      15.681616   6.236490   2.514 0.011920 *  
+## 
+## Zero-inflation model coefficients (binomial with logit link):
+##             Estimate Std. Error z value Pr(>|z|)    
+## (Intercept)  0.57358    0.03747   15.31   <2e-16 ***
+## STARS       -2.28638    0.05257  -43.49   <2e-16 ***
+## LabelAppeal  0.55906    0.03628   15.41   <2e-16 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1 
+## 
+## Theta = 6463077.5745 
+## Number of iterations in BFGS optimization: 39 
+## Log-likelihood: -2.196e+04 on 9 Df
+\end{verbatim}
+
+We have reduced the degrees-of-freedom from 17 down to 9 which is as far
+as we'll go with the zero-inflated negative binomial model.
+
+\begin{center}
+{\huge Select Models}
+\end{center}
+
+Linear Model:
+
+Lastly we are going to look at a regular linear model, as a comparison
+to the data shown above. Again we are going to compare Science
+vs.~Perception, to see if there is any relationship between chemisty.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{lin.mod.perc <-}\StringTok{ }\KeywordTok{lm}\NormalTok{(TARGET ~}\StringTok{ }\NormalTok{. -}\StringTok{ }\NormalTok{STARS -}\StringTok{ }\NormalTok{LabelAppeal,}\DataTypeTok{data =} \NormalTok{train) }
+\KeywordTok{summary}\NormalTok{(lin.mod.perc)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+## Call:
+## lm(formula = TARGET ~ . - STARS - LabelAppeal, data = train)
+## 
+## Residuals:
+##    Min     1Q Median     3Q    Max 
+## -4.475 -1.299  0.291  1.321  5.578 
+## 
+## Coefficients:
+##                      Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)         8.1752307  0.7003838  11.673  < 2e-16 ***
+## FixedAcidity       -0.0019599  0.0029259  -0.670 0.502964    
+## VolatileAcidity    -0.2074911  0.0234931  -8.832  < 2e-16 ***
+## CitricAcid          0.0258033  0.0212388   1.215 0.224428    
+## ResidualSugar       0.0009384  0.0005419   1.731 0.083395 .  
+## Chlorides          -0.1726132  0.0574946  -3.002 0.002686 ** 
+## FreeSulfurDioxide   0.0004048  0.0001229   3.293 0.000995 ***
+## TotalSulfurDioxide  0.0002846  0.0000792   3.593 0.000328 ***
+## Density            -2.4957265  0.6907704  -3.613 0.000304 ***
+## pH                 -0.0665014  0.0270196  -2.461 0.013863 *  
+## Sulphates          -0.0605209  0.0196087  -3.086 0.002031 ** 
+## Alcohol             0.0257847  0.0049229   5.238 1.66e-07 ***
+## AcidIndex          -0.3431104  0.0143537 -23.904  < 2e-16 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 1.849 on 10223 degrees of freedom
+## Multiple R-squared:  0.0755, Adjusted R-squared:  0.07442 
+## F-statistic: 69.58 on 12 and 10223 DF,  p-value: < 2.2e-16
+\end{verbatim}
+
+We can see not all the chemistry variables are significant, using
+backward stepwise, we can narrow down the insignificant independent
+variables. This produced the following forumula for
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{lin.mod.back <-}\StringTok{ }\KeywordTok{step}\NormalTok{(lin.mod.perc)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Start:  AIC=12596.08
+## TARGET ~ (FixedAcidity + VolatileAcidity + CitricAcid + ResidualSugar + 
+##     Chlorides + FreeSulfurDioxide + TotalSulfurDioxide + Density + 
+##     pH + Sulphates + Alcohol + LabelAppeal + AcidIndex + STARS) - 
+##     STARS - LabelAppeal
+## 
+##                      Df Sum of Sq   RSS   AIC
+## - FixedAcidity        1      1.53 34952 12594
+## - CitricAcid          1      5.05 34956 12596
+## <none>                            34951 12596
+## - ResidualSugar       1     10.25 34961 12597
+## - pH                  1     20.71 34971 12600
+## - Chlorides           1     30.82 34981 12603
+## - Sulphates           1     32.57 34983 12604
+## - FreeSulfurDioxide   1     37.07 34988 12605
+## - TotalSulfurDioxide  1     44.15 34995 12607
+## - Density             1     44.63 34995 12607
+## - Alcohol             1     93.79 35044 12622
+## - VolatileAcidity     1    266.68 35217 12672
+## - AcidIndex           1   1953.53 36904 13151
+## 
+## Step:  AIC=12594.53
+## TARGET ~ VolatileAcidity + CitricAcid + ResidualSugar + Chlorides + 
+##     FreeSulfurDioxide + TotalSulfurDioxide + Density + pH + Sulphates + 
+##     Alcohol + AcidIndex
+## 
+##                      Df Sum of Sq   RSS   AIC
+## - CitricAcid          1      5.03 34957 12594
+## <none>                            34952 12594
+## - ResidualSugar       1     10.32 34963 12596
+## - pH                  1     20.70 34973 12599
+## - Chlorides           1     30.72 34983 12602
+## - Sulphates           1     32.95 34985 12602
+## - FreeSulfurDioxide   1     36.88 34989 12603
+## - Density             1     44.62 34997 12606
+## - TotalSulfurDioxide  1     44.62 34997 12606
+## - Alcohol             1     93.83 35046 12620
+## - VolatileAcidity     1    266.77 35219 12670
+## - AcidIndex           1   2034.43 36987 13172
+## 
+## Step:  AIC=12594.01
+## TARGET ~ VolatileAcidity + ResidualSugar + Chlorides + FreeSulfurDioxide + 
+##     TotalSulfurDioxide + Density + pH + Sulphates + Alcohol + 
+##     AcidIndex
+## 
+##                      Df Sum of Sq   RSS   AIC
+## <none>                            34957 12594
+## - ResidualSugar       1     10.24 34967 12595
+## - pH                  1     20.78 34978 12598
+## - Chlorides           1     30.95 34988 12601
+## - Sulphates           1     33.38 34991 12602
+## - FreeSulfurDioxide   1     37.21 34994 12603
+## - TotalSulfurDioxide  1     44.90 35002 12605
+## - Density             1     45.29 35003 12605
+## - Alcohol             1     95.20 35052 12620
+## - VolatileAcidity     1    268.74 35226 12670
+## - AcidIndex           1   2030.11 36987 13170
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{lin.mod.back <-}\StringTok{ }\KeywordTok{lm}\NormalTok{(TARGET ~}\StringTok{ }\NormalTok{VolatileAcidity +}\StringTok{ }\NormalTok{Chlorides +}\StringTok{ }\NormalTok{FreeSulfurDioxide +}\StringTok{ }
+\StringTok{    }\NormalTok{TotalSulfurDioxide +}\StringTok{ }\NormalTok{Density +}\StringTok{ }\NormalTok{pH +}\StringTok{ }\NormalTok{Sulphates +}\StringTok{ }\NormalTok{Alcohol +}\StringTok{ }
+\StringTok{    }\NormalTok{AcidIndex, }\DataTypeTok{data =} \NormalTok{train)}
+\KeywordTok{summary}\NormalTok{(lin.mod.back)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+## Call:
+## lm(formula = TARGET ~ VolatileAcidity + Chlorides + FreeSulfurDioxide + 
+##     TotalSulfurDioxide + Density + pH + Sulphates + Alcohol + 
+##     AcidIndex, data = train)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -4.5388 -1.2909  0.2904  1.3212  5.6261 
+## 
+## Coefficients:
+##                      Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)         8.198e+00  7.003e-01  11.707  < 2e-16 ***
+## VolatileAcidity    -2.086e-01  2.349e-02  -8.881  < 2e-16 ***
+## Chlorides          -1.731e-01  5.750e-02  -3.010 0.002619 ** 
+## FreeSulfurDioxide   4.092e-04  1.229e-04   3.329 0.000875 ***
+## TotalSulfurDioxide  2.904e-04  7.915e-05   3.669 0.000245 ***
+## Density            -2.516e+00  6.907e-01  -3.643 0.000271 ***
+## pH                 -6.614e-02  2.702e-02  -2.448 0.014386 *  
+## Sulphates          -6.174e-02  1.960e-02  -3.150 0.001636 ** 
+## Alcohol             2.575e-02  4.920e-03   5.234 1.69e-07 ***
+## AcidIndex          -3.437e-01  1.410e-02 -24.373  < 2e-16 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 1.849 on 10226 degrees of freedom
+## Multiple R-squared:  0.07506,    Adjusted R-squared:  0.07424 
+## F-statistic:  92.2 on 9 and 10226 DF,  p-value: < 2.2e-16
+\end{verbatim}
+
+Comparing this to just the appeal data we can see the following:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{lin.mod.app <-}\StringTok{ }\KeywordTok{lm}\NormalTok{(TARGET ~}\StringTok{ }\NormalTok{STARS +}\StringTok{ }\NormalTok{LabelAppeal,}\DataTypeTok{data =} \NormalTok{train) }
+\KeywordTok{summary}\NormalTok{(lin.mod.app)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+## Call:
+## lm(formula = TARGET ~ STARS + LabelAppeal, data = train)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -4.3629 -1.0677  0.0024  0.9323  6.1219 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept)  1.47289    0.02212   66.60   <2e-16 ***
+## STARS        1.03984    0.01170   88.86   <2e-16 ***
+## LabelAppeal  0.40518    0.01556   26.03   <2e-16 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 1.352 on 10233 degrees of freedom
+## Multiple R-squared:  0.5053, Adjusted R-squared:  0.5052 
+## F-statistic:  5227 on 2 and 10233 DF,  p-value: < 2.2e-16
+\end{verbatim}
+
+From the the models, we can clearly see that the appeal data was a much
+more appropriate fit. This can be seen through the R-Squared value,
+which shows that the appeal model explains roughly 50\% of the variance
+in the model. This is a pretty ``good-fit.'' Using the ``science'' data,
+we also se a significant model, however, the fit is much worse, with
+practical none of the variance explained.
+
+Checking the residuals we can see the following:
+
+Science model:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{plot}\NormalTok{(lin.mod.back)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{Data621-HW5-SmoothOperators_files/figure-latex/unnamed-chunk-20-1.pdf}
+\includegraphics{Data621-HW5-SmoothOperators_files/figure-latex/unnamed-chunk-20-2.pdf}
+\includegraphics{Data621-HW5-SmoothOperators_files/figure-latex/unnamed-chunk-20-3.pdf}
+\includegraphics{Data621-HW5-SmoothOperators_files/figure-latex/unnamed-chunk-20-4.pdf}
+
+Appeal Model:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{plot}\NormalTok{(lin.mod.app)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{Data621-HW5-SmoothOperators_files/figure-latex/unnamed-chunk-21-1.pdf}
+\includegraphics{Data621-HW5-SmoothOperators_files/figure-latex/unnamed-chunk-21-2.pdf}
+\includegraphics{Data621-HW5-SmoothOperators_files/figure-latex/unnamed-chunk-21-3.pdf}
+\includegraphics{Data621-HW5-SmoothOperators_files/figure-latex/unnamed-chunk-21-4.pdf}
+
+From the above, we can clearly see that the first ``science'' model
+shows clear patterns in the residuals, which indicates that linear
+modeling is not at all a good choice for those particular variables.
+However, just using the appeal variables we see a much better picture,
+with a more uniformed residual distribution, and no clear patterns that
+would suggest another choice in models.
+
+\subsection{Select Models}\label{select-models}
+
+NEED VERBIAGE - SELECT MODELS
+
+Smooth Operators - All Done!
+
+
+\end{document}
