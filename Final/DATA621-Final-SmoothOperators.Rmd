@@ -25,21 +25,29 @@ suppressWarnings(suppressMessages(library(broom)))
 suppressWarnings(suppressMessages(library(lmtest)))
 
 # Read in the dataset from github
-wine.raw <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/master/Homework5/wine-training-data.csv"),header=TRUE,na.strings=c(""," "), stringsAsFactors = FALSE)
+movie.raw <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/master/Final/movie_metadata.csv"),header=TRUE,na.strings=c(""," "), stringsAsFactors = FALSE)
 
 
 # get rid of the INDEX column since it's not used
-wine <- wine.raw[2:length(wine.raw)]
+movie <- movie.raw[2:length(movie.raw)]
 
 # Let's start by exploring the type of each variable
-types <- sapply(1:length(wine),function(x) typeof(wine[,x]))
-types.df <- data.frame(VAR=names(wine),TYPE=types)
+types <- sapply(1:length(movie),function(x) typeof(movie[,x]))
+types.df <- data.frame(VAR=names(movie),TYPE=types)
 kable(types.df)
 
 # Now generate some summary statistics
-kable(summary(wine[1:6]))
-kable(summary(wine[7:12]))
-kable(summary(wine[13:length(wine)]))
+kable(summary(movie[1:6]))
+kable(summary(movie[7:12]))
+kable(summary(movie[13:length(movie)]))
 #
 
 ```
+
+```{r}
+length(unique(movie$director_name))
+length(unique(movie$actor_1_name))
+length(unique(movie$actor_2_name))
+length(unique(movie$actor_3_name))
+```
+
