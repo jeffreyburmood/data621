@@ -1,0 +1,141 @@
+---
+title: "DATA621-FinalProject-SmoothOperators"
+author: "Rob Hodde, Matt Farris, Jeffrey Burmood, Bin Lin"
+date: "5/11/2017"
+output: pdf_document
+---
+
+###Problem Description  
+  
+Our final project will explore, analyze and model a data set containing information on approximately 5,000 movies. The dataset contains movie data extracted from the IMDB website and is available on Kaggle.com.
+
+The project will develop predictive models for two questions:  
+  
+1) Will the movie make money, lose money, or break even (approximately)?  
+  
+2) What is the anticipated gross margin (profit) for the movie?  
+
+
+\begin{center}
+{\huge Data Exploration}
+\end{center}
+  
+##Data Exploration
+  
+```{r,echo=FALSE}
+# Load required libraries
+
+suppressWarnings(suppressMessages(library(ggplot2)))
+suppressWarnings(suppressMessages(library(ROCR)))
+suppressWarnings(suppressMessages(library(RCurl)))
+suppressWarnings(suppressMessages(library(knitr)))
+suppressWarnings(suppressMessages(library(Hmisc)))
+suppressWarnings(suppressMessages(library(caret)))
+suppressWarnings(suppressMessages(library(stringr)))
+suppressWarnings(suppressMessages(library(mice)))
+suppressWarnings(suppressMessages(library(dplyr)))
+suppressWarnings(suppressMessages(library(reshape2)))
+suppressWarnings(suppressMessages(library(MASS)))
+suppressWarnings(suppressMessages(library(pscl)))
+suppressWarnings(suppressMessages(library(broom)))
+suppressWarnings(suppressMessages(library(lmtest)))
+
+# Read in the dataset from github
+movies.raw <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/master/Final/movie_metadata.csv"),header=TRUE,na.strings=c(""," "), stringsAsFactors = FALSE)
+
+
+# Remove the columns not being used in the analysis
+col.remove <- c(1,2,3,7,10,11,15,17,18,19,20,21,24,27,28)
+movies <- subset(movies.raw,select=-col.remove)
+
+# there are only a few NAs, go ahead and remove rows with NAs
+movies <- na.omit(movies)
+```
+  
+```{r,echo=FALSE,fig.width = 8, fig.height = 3}
+# Let's start by exploring the type of each variable
+types <- sapply(1:length(movies),function(x) typeof(movies[,x]))
+types.df <- data.frame(VAR=names(movies),TYPE=types)
+kable(types.df)
+
+# Set up content rating as factors to form a categorical variable for modeling
+movies$content_rating <- factor(movies$content_rating)
+
+# Show a statistical summary of the data
+summary(movies)
+
+# grab just the numeric data columns for variable analysis
+movies.numeric <- subset(movies,select=-c(6,10))
+
+# start by looking for correlations between the numeric variables (ONLY the predictor variables)
+movies.pred <- subset(movies.numeric, select=-c(5))
+cor.table <- cor(movies.pred) # build a table of inter-variable correlation values
+kable(cor.table[,1:4])
+kable(cor.table[,5:8])
+kable(cor.table[,9:10])
+
+# Look at the boxplots of the numeric variables
+f <- colnames(movies.numeric)  # establish the data categories to be studied
+par(mfrow=c(1,2))
+
+for (i in 1:length(f)){
+  boxplot(movies.numeric[,i],main = f[i])
+}
+
+# we also need to look at the histograms for the numeric variables
+for (i in 1:length(f)){
+  m <- mean(movies.numeric[,i])
+  s <- sd(movies.numeric[,i])  
+  hist(movies.numeric[,i],freq=FALSE,main = f[i],xlab="")
+  curve(dnorm(x,mean=m,sd=s),col="darkblue",lwd=2,add=TRUE)
+}
+
+# let's also look at a quick plot of the data for each variable
+for (i in 1:length(f)){
+  plot(movies.numeric[,i],main = f[i],xlab="",ylab="")
+}
+
+```
+  
+After exploring the data, we noticed there is a scattering of NAs across the variables. Due to the relatively low number of total NAs, we choose to remove all rows with NAs, leaving 3,828 rows of data.  
+
+Next, the content_rating variable is converted to a factor so the rating categories can be used with the regression models.  
+  
+
+  
+\begin{center}
+{\huge Data Preparation}
+\end{center}
+
+
+##Data Preparation  
+  
+
+```{r,echo=FALSE}
+
+```
+  
+  
+\begin{center}
+{\huge Build Models}
+\end{center}
+
+
+##Build Models  
+  
+```{r,echo=FALSE}
+# Now we're ready to explore model building. In preparation, split the dataset into a training set
+# and a test set
+## 80% of the sample size
+set.seed(121)
+smp_size <- floor(0.80 * nrow(movies))
+
+## set the seed to make your partition reproductible
+train_ind <- sample(seq_len(nrow(movies)), size = smp_size)
+
+train <- movies[train_ind, ]
+test <- movies[-train_ind, ]
+```  
+
+
+Smooth Operators - All Done!  
