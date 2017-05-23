@@ -5,7 +5,7 @@ date: "5/11/2017"
 output: pdf_document
 ---
 
-###Problem Description  
+##Problem Description  
   
 Our final project will explore, analyze and model a data set containing information on approximately 5,000 movies. The dataset contains movie data extracted from the IMDB website and is available on Kaggle.com.
 
@@ -43,9 +43,11 @@ suppressWarnings(suppressMessages(library(lmtest)))
 # Read in the dataset from github
 movies.raw <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/master/Final/movie_metadata.csv"),header=TRUE,na.strings=c(""," "), stringsAsFactors = FALSE)
 
+cpi <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/master/Final/CPI-Year.csv"),header=TRUE,na.strings=c(""," "), stringsAsFactors = FALSE)
+names(cpi)<-c("title_year","cpi")
 
 # Remove the columns not being used in the analysis
-col.remove <- c(1,2,3,7,10,11,15,17,18,19,20,21,24,27,28)
+col.remove <- c(1,2,3,7,10,11,15,17,18,19,20,21,27,28)
 movies <- subset(movies.raw,select=-col.remove)
 
 # there are only a few NAs, go ahead and remove rows with NAs
@@ -65,7 +67,7 @@ movies$content_rating <- factor(movies$content_rating)
 summary(movies)
 
 # grab just the numeric data columns for variable analysis
-movies.numeric <- subset(movies,select=-c(6,10))
+movies.numeric <- subset(movies,select=-c(6,10,24))
 
 # start by looking for correlations between the numeric variables (ONLY the predictor variables)
 movies.pred <- subset(movies.numeric, select=-c(5))
@@ -102,20 +104,54 @@ After exploring the data, we noticed there is a scattering of NAs across the var
 Next, the content_rating variable is converted to a factor so the rating categories can be used with the regression models.  
   
 
-  
+
 \begin{center}
 {\huge Data Preparation}
 \end{center}
 
 
 ##Data Preparation  
-  
+
+One of the big issues faced in when using this dataset is the time frame. These movies were collected over the past 80+ years, and the following shows are distribution over time: 
 
 ```{r,echo=FALSE}
-
+hist(movies$title_year,main = "Year Released",xlab="")
 ```
   
-  
+
+As you can see, the vast majority came from 1990s and above, but we can't discredit the movies from previous year. In order to accurately portray elements from the past, we have instituted a rate of inflation calculation. Using the consumer price index (for our part here we are making a crucial assumption, that all dollars are calculated based on US currency, and we are ignoring even more complex foreign exchange rates of the time), we can calculate the gross value per year. As a basis of comparison, we are using the CPI index from 2016, as the last movie was made in 2016. 
+
+
+```{r}
+movies <- merge(x = movies, y = cpi, by = "title_year")
+movies$adj_gross <- with(movies, 240/cpi * gross)
+movies$adj_budget <- with(movies, 240/cpi * budget)
+movies$adj_margin <- with(movies, adj_gross-adj_budget)
+```
+
+```{r}
+attach(movies)
+plot(title_year,gross)
+plot(title_year,adj_gross)
+```
+
+From the above graphs, we can see that the adjustment for the gross did indeed create a more uniformed dataset (where as before we saw movies increasing over the years). As a point of interest, the movies that made over a billion dollars are shown below:
+```{r}
+highest_gross <- subset(movies, adj_gross > 1000000000, 
+                        select=c("movie_title", "gross","adj_gross") )
+highest_gross
+```
+
+```{r}
+boxplot(movies$adj_margin)
+```
+
+```{r}
+subset(movies, adj_margin <= 0, select = c("movie_title", "adj_margin", "title_year"))
+
+```
+
+
 \begin{center}
 {\huge Build Models}
 \end{center}
