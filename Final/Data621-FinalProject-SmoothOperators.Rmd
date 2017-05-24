@@ -54,6 +54,16 @@ movies <- subset(movies.raw,select=-col.remove)
 movies <- na.omit(movies)
 ```
   
+To this point we've removed the data columns for the variables that we will not be using in the analysis. The columns remaining in the data set are the following:  
+  
+```{r,echo=FALSE}
+names(movies)
+```
+  
+After exploring the data, we noticed there is a scattering of NAs across the variables. Due to the relatively low number of total NAs, we choose to remove all rows with NAs, leaving 3,828 rows of data.  
+  
+Next we will explore the nature of the data for the variables we will be using in the analysis.  
+  
 ```{r,echo=FALSE,fig.width = 8, fig.height = 3}
 # Let's start by exploring the type of each variable
 types <- sapply(1:length(movies),function(x) typeof(movies[,x]))
@@ -96,13 +106,33 @@ for (i in 1:length(f)){
 for (i in 1:length(f)){
   plot(movies.numeric[,i],main = f[i],xlab="",ylab="")
 }
-
 ```
   
-After exploring the data, we noticed there is a scattering of NAs across the variables. Due to the relatively low number of total NAs, we choose to remove all rows with NAs, leaving 3,828 rows of data.  
-
-Next, the content_rating variable is converted to a factor so the rating categories can be used with the regression models.  
+As we can see from the plots and statistical summary, most of the variables have a reasonable distribution except those variable associated with the Facebook likes. There are five variables related to Facebook likes that are highly skewed due to a large number of zeros. At this point we assume these zeros represent NAs in the Facebook data.  
   
+Next, we'll use the mice package to impute the Facebook likes data for the zeros/NAs.
+  
+```{r,echo=FALSE}
+# build a dataframe of just the facebook likes data
+facebook.likes <- data.frame(director_facebook_likes=movies$director_facebook_likes,actor_1_facebook_likes=movies$actor_1_facebook_likes,actor_2_facebook_likes=movies$actor_2_facebook_likes,actor_3_facebook_likes=movies$actor_3_facebook_likes,cast_total_facebook_likes=movies$cast_total_facebook_likes)
+# now convert all of the zero values to "NA"
+facebook.likes <- sapply(facebook.likes, function(x) ifelse(x==0,NA,x))
+# review the NA patterns for each variable
+md.pattern(facebook.likes)
+#mice PACKAGE
+#uses Predictive Mean Matching. 
+fb.likes.i <- mice(facebook.likes, m = 3, print=F)
+facebook.likes <- complete(fb.likes.i,1)
+# repopulate the movies dataframe with the imputed variable
+movies$director_facebook_likes <- facebook.likes$director_facebook_likes
+movies$actor_1_facebook_likes <- facebook.likes$actor_1_facebook_likes
+movies$actor_2_facebook_likes <- facebook.likes$actor_2_facebook_likes
+movies$actor_3_facebook_likes <- facebook.likes$actor_3_facebook_likes
+movies$cast_total_facebook_likes <- facebook.likes$cast_total_facebook_likes
+
+summary(movies)
+
+```
 
 
 \begin{center}
@@ -137,8 +167,7 @@ plot(title_year,adj_gross)
 
 From the above graphs, we can see that the adjustment for the gross did indeed create a more uniformed dataset (where as before we saw movies increasing over the years). As a point of interest, the movies that made over a billion dollars are shown below:
 ```{r}
-highest_gross <- subset(movies, adj_gross > 1000000000, 
-                        select=c("movie_title", "gross","adj_gross") )
+highest_gross <- subset(movies, adj_gross > 1000000000, select=c("movie_title", "gross", "adj_gross"))
 highest_gross
 ```
 
@@ -172,6 +201,39 @@ train_ind <- sample(seq_len(nrow(movies)), size = smp_size)
 train <- movies[train_ind, ]
 test <- movies[-train_ind, ]
 ```  
+
+
+###Profit Margin Model
+```{r}
+#Elminate title_year, gross, budget, cpi
+movies_new <- Filter(is.numeric, movies)
+profit_margin <- movies_new$adj_margin / movies_new$adj_gross
+movies_new <- cbind(movies_new, profit_margin)
+
+movies_new <- subset(movies_new,select = -c(1, 6, 10, 12, 13))
+
+##Also exclude adj_margin profit_margin when building models for gross prediction, because they are simply the linear combinations of the other two variables, adj_gross and adj_budget. 
+m1 <- lm(adj_gross ~. - adj_margin - profit_margin, data = movies_new) 
+summary(m1)
+m1_back <- step(m1, trace = 0)
+summary(m1_back)
+gross_p <- predict(m1_back, newdata = movies_new, type = "response")
+
+
+plot(m1_back)
+plot(x = gross_p, y = movies_new$adj_gross, xlab = "Predicted Gross", ylab = "Actual Adjusted Gross") 
+abline(a=0,b=1)
+
+profit_margin_p <- (gross_p - movies_new$adj_budget) / gross_p
+
+movies_p <- data.frame(movies$movie_title, movies_new$adj_budget, movies_new$adj_gross, gross_p, movies_new$profit_margin, profit_margin_p)
+
+colnames(movies_p) <- c("Movie Title", "Actual Adjusted Budget", "Actualy Adjusted Gross", "Predicted Gross", "Actualy Profit Margin", "Predicted Profit Margin")
+
+head(movies_p)
+```
+
+
 
 
 Smooth Operators - All Done!  
