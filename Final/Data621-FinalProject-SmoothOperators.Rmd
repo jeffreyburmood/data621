@@ -52,6 +52,8 @@ movies <- subset(movies.raw,select=-col.remove)
 
 # there are only a few NAs, go ahead and remove rows with NAs
 movies <- na.omit(movies)
+
+movies$movie_title <- iconv(movies$movie_title, "latin1", "ASCII", sub="")
 ```
   
 To this point we've removed the data columns for the variables that we will not be using in the analysis. The columns remaining in the data set are the following:  
@@ -154,8 +156,8 @@ As you can see, the vast majority came from 1990s and above, but we can't discre
 
 ```{r}
 movies <- merge(x = movies, y = cpi, by = "title_year")
-movies$adj_gross <- with(movies, 240/cpi * gross)
-movies$adj_budget <- with(movies, 240/cpi * budget)
+movies$adj_gross <- with(movies, (240/cpi * gross))
+movies$adj_budget <- with(movies, (240/cpi * budget))
 movies$adj_margin <- with(movies, adj_gross-adj_budget)
 ```
 
@@ -175,17 +177,10 @@ highest_gross
 boxplot(movies$adj_margin)
 ```
 
-```{r}
-subset(movies, adj_margin <= 0, select = c("movie_title", "adj_margin", "title_year"))
-
-```
-
 
 \begin{center}
 {\huge Build Models}
 \end{center}
-
-
 ##Build Models  
   
 ```{r,echo=FALSE}
@@ -194,14 +189,11 @@ subset(movies, adj_margin <= 0, select = c("movie_title", "adj_margin", "title_y
 ## 80% of the sample size
 set.seed(121)
 smp_size <- floor(0.80 * nrow(movies))
-
 ## set the seed to make your partition reproductible
 train_ind <- sample(seq_len(nrow(movies)), size = smp_size)
-
 train <- movies[train_ind, ]
 test <- movies[-train_ind, ]
 ```  
-
 
 ###Profit Margin Model
 ```{r}
@@ -218,7 +210,6 @@ summary(m1)
 m1_back <- step(m1, trace = 0)
 summary(m1_back)
 gross_p <- predict(m1_back, newdata = movies_new, type = "response")
-
 
 plot(m1_back)
 plot(x = gross_p, y = movies_new$adj_gross, xlab = "Predicted Gross", ylab = "Actual Adjusted Gross") 
@@ -237,3 +228,4 @@ head(movies_p)
 
 
 Smooth Operators - All Done!  
+
