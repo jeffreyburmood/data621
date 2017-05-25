@@ -1,7 +1,7 @@
 ---
 title: "DATA621-FinalProject-SmoothOperators"
 author: "Rob Hodde, Matt Farris, Jeffrey Burmood, Bin Lin"
-date: "5/11/2017"
+date: "5/26/2017"
 output: pdf_document
 ---
 
@@ -47,13 +47,17 @@ cpi <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/da
 names(cpi)<-c("title_year","cpi")
 
 # Remove the columns not being used in the analysis
-col.remove <- c(1,2,3,7,10,11,15,17,18,19,20,21,27,28)
+col.remove <- c(1,2,3,7,10,11,15,17,18,19,20,27,28)
 movies <- subset(movies.raw,select=-col.remove)
 
 # there are only a few NAs, go ahead and remove rows with NAs
 movies <- na.omit(movies)
 
 movies$movie_title <- iconv(movies$movie_title, "latin1", "ASCII", sub="")
+
+#Removing Foreign Films
+movies <-subset(movies, country == "USA")
+movies <- subset(movies, select = -country)
 ```
   
 To this point we've removed the data columns for the variables that we will not be using in the analysis. The columns remaining in the data set are the following:  
@@ -111,9 +115,11 @@ for (i in 1:length(f)){
 ```
   
 As we can see from the plots and statistical summary, most of the variables have a reasonable distribution except those variable associated with the Facebook likes. There are five variables related to Facebook likes that are highly skewed due to a large number of zeros. At this point we assume these zeros represent NAs in the Facebook data.  
+
   
 Next, we'll use the mice package to impute the Facebook likes data for the zeros/NAs.
   
+
 ```{r,echo=FALSE}
 # build a dataframe of just the facebook likes data
 facebook.likes <- data.frame(director_facebook_likes=movies$director_facebook_likes,actor_1_facebook_likes=movies$actor_1_facebook_likes,actor_2_facebook_likes=movies$actor_2_facebook_likes,actor_3_facebook_likes=movies$actor_3_facebook_likes,cast_total_facebook_likes=movies$cast_total_facebook_likes)
@@ -144,7 +150,7 @@ summary(movies)
 
 ##Data Preparation  
 
-One of the big issues faced in when using this dataset is the time frame. These movies were collected over the past 80+ years, and the following shows are distribution over time: 
+One of the big issues faced in when using this dataset is the time frame. These movies were collected over the past 80+ years, and the following shows our distribution over time: 
 
 ```{r,echo=FALSE}
 hist(movies$title_year,main = "Year Released",xlab="")
@@ -163,15 +169,19 @@ movies$adj_margin <- with(movies, adj_gross-adj_budget)
 
 ```{r}
 attach(movies)
-plot(title_year,gross)
-plot(title_year,adj_gross)
+par(mfrow=c(2,1))
+plot(title_year,gross, main="Unadjusted Gross Per Year")
+plot(title_year,adj_gross,main="Adjusted Gross Per Year")
 ```
 
 From the above graphs, we can see that the adjustment for the gross did indeed create a more uniformed dataset (where as before we saw movies increasing over the years). As a point of interest, the movies that made over a billion dollars are shown below:
+
 ```{r}
 highest_gross <- subset(movies, adj_gross > 1000000000, select=c("movie_title", "gross", "adj_gross"))
 highest_gross
 ```
+
+A quick Google search indicates that the above movies are consistently listed the top grossing movies of all time. Furthermore, our "estimated adjusted gross" mimics the findings that we see with adjusted gross (for the most part, there are two schools of thought on how to adjust gross, using ticket prices or our method adjusting based on CPI). Though our dollar amount vary slightly from other sources, any variance is consistent across our datase.   
 
 ```{r}
 boxplot(movies$adj_margin)
@@ -182,18 +192,62 @@ boxplot(movies$adj_margin)
 {\huge Build Models}
 \end{center}
 ##Build Models  
+
+### Binomial Regression 
+
+Our first model we want to investigate is whether or not we can predict if film will make money given the cast and direction. To do this, we decided to create a binary regression model, transforming our adjusted 
   
 ```{r,echo=FALSE}
 # Now we're ready to explore model building. In preparation, split the dataset into a training set
 # and a test set
 ## 80% of the sample size
+#Creating a binomial column 
+movies_bin <- Filter(is.numeric, movies)
+movies_bin$money <- 0 
+movies_bin$money[movies_bin$adj_margin > 0] <-1
+pred_col <- c(1,2,3,4,5,7,8,9,11,17)
+movies_bin <- movies_bin[,pred_col]
+
 set.seed(121)
-smp_size <- floor(0.80 * nrow(movies))
+smp_size <- floor(0.80 * nrow(movies_bin))
 ## set the seed to make your partition reproductible
-train_ind <- sample(seq_len(nrow(movies)), size = smp_size)
-train <- movies[train_ind, ]
-test <- movies[-train_ind, ]
+train_ind <- sample(seq_len(nrow(movies_bin)), size = smp_size)
+train <- movies_bin[train_ind, ]
+test <- movies_bin[-train_ind, ]
 ```  
+
+```{r}
+#Creating the Binomial Model 
+bin_movie <- glm(money ~ ., family=binomial(link='logit'),data=train)
+summary(bin_movie)
+
+```
+```{r}
+pred_col <- c(1,2,3,4,5,7,8,9,11)
+p <- predict(bin_movie, newdata=test, type = "response")
+pr <- prediction(p, test$money)
+auc <- performance(pr, measure = "auc")
+auc <- auc@y.values[[1]]
+auc 
+```
+
+
+Using all the prediction variables at hand, the model accurately predicts 76% of the time. Using backward stepwise regression, we attempted to remove some variables that may not have had significance in our model.
+
+```{r}
+backward <- step(bin_movie)
+summary(backward)
+
+p <- predict(backward, newdata=test, type="response")
+pr <- prediction(p, test$money)
+prf <- performance(pr, measure = "tpr", x.measure = "fpr")
+auc_back <- performance(pr, measure = "auc")
+auc_back <- auc_back@y.values[[1]]
+plot(prf)
+abline(a = 0, b = 1)
+auc_back
+```
+
 
 ###Profit Margin Model
 ```{r}
