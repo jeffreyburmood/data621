@@ -115,9 +115,11 @@ for (i in 1:length(f)){
 ```
   
 As we can see from the plots and statistical summary, most of the variables have a reasonable distribution except those variable associated with the Facebook likes. There are five variables related to Facebook likes that are highly skewed due to a large number of zeros. At this point we assume these zeros represent NAs in the Facebook data.  
+
   
 Next, we'll use the mice package to impute the Facebook likes data for the zeros/NAs.
   
+
 ```{r,echo=FALSE}
 # build a dataframe of just the facebook likes data
 facebook.likes <- data.frame(director_facebook_likes=movies$director_facebook_likes,actor_1_facebook_likes=movies$actor_1_facebook_likes,actor_2_facebook_likes=movies$actor_2_facebook_likes,actor_3_facebook_likes=movies$actor_3_facebook_likes,cast_total_facebook_likes=movies$cast_total_facebook_likes)
@@ -213,7 +215,6 @@ train_ind <- sample(seq_len(nrow(movies_bin)), size = smp_size)
 train <- movies_bin[train_ind, ]
 test <- movies_bin[-train_ind, ]
 ```  
-
 
 ```{r}
 #Creating the Binomial Model 
