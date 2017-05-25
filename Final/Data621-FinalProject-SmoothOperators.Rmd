@@ -39,6 +39,8 @@ suppressWarnings(suppressMessages(library(MASS)))
 suppressWarnings(suppressMessages(library(pscl)))
 suppressWarnings(suppressMessages(library(broom)))
 suppressWarnings(suppressMessages(library(lmtest)))
+suppressWarnings(suppressMessages(library(moments)))
+suppressWarnings(suppressMessages(library(forecast)))
 
 # Read in the dataset from github
 movies.raw <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/master/Final/movie_metadata.csv"),header=TRUE,na.strings=c(""," "), stringsAsFactors = FALSE)
@@ -160,14 +162,14 @@ hist(movies$title_year,main = "Year Released",xlab="")
 As you can see, the vast majority came from 1990s and above, but we can't discredit the movies from previous year. In order to accurately portray elements from the past, we have instituted a rate of inflation calculation. Using the consumer price index (for our part here we are making a crucial assumption, that all dollars are calculated based on US currency, and we are ignoring even more complex foreign exchange rates of the time), we can calculate the gross value per year. As a basis of comparison, we are using the CPI index from 2016, as the last movie was made in 2016. 
 
 
-```{r}
+```{r,echo=FALSE}
 movies <- merge(x = movies, y = cpi, by = "title_year")
 movies$adj_gross <- with(movies, (240/cpi * gross))
 movies$adj_budget <- with(movies, (240/cpi * budget))
 movies$adj_margin <- with(movies, adj_gross-adj_budget)
 ```
 
-```{r}
+```{r,echo=FALSE}
 attach(movies)
 par(mfrow=c(2,1))
 plot(title_year,gross, main="Unadjusted Gross Per Year")
@@ -176,14 +178,14 @@ plot(title_year,adj_gross,main="Adjusted Gross Per Year")
 
 From the above graphs, we can see that the adjustment for the gross did indeed create a more uniformed dataset (where as before we saw movies increasing over the years). As a point of interest, the movies that made over a billion dollars are shown below:
 
-```{r}
+```{r,echo=FALSE}
 highest_gross <- subset(movies, adj_gross > 1000000000, select=c("movie_title", "gross", "adj_gross"))
 highest_gross
 ```
 
 A quick Google search indicates that the above movies are consistently listed the top grossing movies of all time. Furthermore, our "estimated adjusted gross" mimics the findings that we see with adjusted gross (for the most part, there are two schools of thought on how to adjust gross, using ticket prices or our method adjusting based on CPI). Though our dollar amount vary slightly from other sources, any variance is consistent across our datase.   
 
-```{r}
+```{r,echo=FALSE}
 boxplot(movies$adj_margin)
 ```
 
@@ -216,13 +218,13 @@ train <- movies_bin[train_ind, ]
 test <- movies_bin[-train_ind, ]
 ```  
 
-```{r}
+```{r,echo=FALSE}
 #Creating the Binomial Model 
 bin_movie <- glm(money ~ ., family=binomial(link='logit'),data=train)
 summary(bin_movie)
 
 ```
-```{r}
+```{r,echo=FALSE}
 pred_col <- c(1,2,3,4,5,7,8,9,11)
 p <- predict(bin_movie, newdata=test, type = "response")
 pr <- prediction(p, test$money)
@@ -234,7 +236,7 @@ auc
 
 Using all the prediction variables at hand, the model accurately predicts 76% of the time. Using backward stepwise regression, we attempted to remove some variables that may not have had significance in our model.
 
-```{r}
+```{r,echo=FALSE}
 backward <- step(bin_movie)
 summary(backward)
 
@@ -250,36 +252,142 @@ auc_back
 
 
 ###Profit Margin Model
-```{r}
-#Elminate title_year, gross, budget, cpi
-movies_new <- Filter(is.numeric, movies)
-profit_margin <- movies_new$adj_margin / movies_new$adj_gross
-movies_new <- cbind(movies_new, profit_margin)
+```{r,echo=FALSE}
+movies1 <- Filter(is.numeric, movies)
+colSums(sapply(movies1, is.na))
+colSums(sapply(movies1, function(x) return (x == 0)))
 
-movies_new <- subset(movies_new,select = -c(1, 6, 10, 12, 13))
-
-##Also exclude adj_margin profit_margin when building models for gross prediction, because they are simply the linear combinations of the other two variables, adj_gross and adj_budget. 
-m1 <- lm(adj_gross ~. - adj_margin - profit_margin, data = movies_new) 
-summary(m1)
-m1_back <- step(m1, trace = 0)
-summary(m1_back)
-gross_p <- predict(m1_back, newdata = movies_new, type = "response")
-
-plot(m1_back)
-plot(x = gross_p, y = movies_new$adj_gross, xlab = "Predicted Gross", ylab = "Actual Adjusted Gross") 
-abline(a=0,b=1)
-
-profit_margin_p <- (gross_p - movies_new$adj_budget) / gross_p
-
-movies_p <- data.frame(movies$movie_title, movies_new$adj_budget, movies_new$adj_gross, gross_p, movies_new$profit_margin, profit_margin_p)
-
-colnames(movies_p) <- c("Movie Title", "Actual Adjusted Budget", "Actualy Adjusted Gross", "Predicted Gross", "Actualy Profit Margin", "Predicted Profit Margin")
-
-head(movies_p)
+#Elminate title_year, gross, facenumber_in_poster(too many zeros), budget, cpi
+movies1 <- subset(movies1, select = -c(1, 6, 9, 10, 13))
 ```
 
 
 
+```{r,echo=FALSE}
+##Also exclude adj_margin when building models for gross prediction, because they are simply the linear combinations of the other two variables, adj_gross and adj_budget. 
+m1 <- lm(adj_gross ~. - adj_margin, data = movies1) 
+m1_back <- step(m1, trace = 0)
+summary(m1_back)
+
+AIC(m1_back)
+logLik(m1_back)
+par(mfcol=c(2,2))
+plot(m1_back)
+
+par(mar = rep(4, 4), mfcol=c(1,2))
+hist(movies1$adj_gross, xlab = "Actual Gross", ylab = "Number of Movies")
+hist(fitted(m1_back), xlab = "Predicted Gross", ylab = "Number of Movies")
+
+hist(m1_back$residuals)
+skewness(m1_back$residuals)
+```
+
+
+```{r,echo=FALSE}
+duration_bc <- boxcox(movies1$duration ~ 1, plotit = FALSE)  
+duration_lambda <- with(duration_bc, x[which.max(y)])
+dfl_bc <- boxcox(movies1$director_facebook_likes ~ 1, plotit = FALSE)	
+dfl_lambda <- with(dfl_bc, x[which.max(y)])
+a3fl_bc <- boxcox(movies1$actor_3_facebook_likes ~ 1, plotit = FALSE)	
+a3fl_lambda <- with(a3fl_bc, x[which.max(y)])
+a1fl_bc <- boxcox(movies1$actor_1_facebook_likes ~ 1, plotit = FALSE)	
+a1fl_lambda <- with(a1fl_bc, x[which.max(y)])
+nvu_bc <- boxcox(movies1$num_voted_users ~ 1, plotit = FALSE)	
+nvu_lambda <- with(nvu_bc, x[which.max(y)])
+ctfl_bc <- boxcox(movies1$cast_total_facebook_likes ~ 1, plotit = FALSE)	
+ctfl_lambda <- with(ctfl_bc, x[which.max(y)])
+a2fl_bc <- boxcox(movies1$actor_2_facebook_likes ~ 1, plotit = FALSE)	
+a2fl_lambda <- with(a2fl_bc, x[which.max(y)])
+imdb_bc <- boxcox((movies1$imdb_score) ~ 1, plotit = FALSE)	
+imdb_lambda <- with(imdb_bc, x[which.max(y)])
+ab_bc <- boxcox(movies1$adj_budget ~ 1, plotit = FALSE)	
+ab_lambda <- with(ab_bc, x[which.max(y)])
+
+
+duration <- BoxCox(movies1$duration, duration_lambda)
+director_facebook_likes <- BoxCox(movies1$director_facebook_likes, dfl_lambda)
+actor_3_facebook_likes <- BoxCox(movies1$actor_3_facebook_likes, a3fl_lambda)
+actor_1_facebook_likes <- BoxCox(movies1$actor_1_facebook_likes, a1fl_lambda)
+num_voted_users <- BoxCox(movies1$num_voted_users, nvu_lambda)
+cast_total_facebook_likes <- BoxCox(movies1$cast_total_facebook_likes, ctfl_lambda)
+actor_2_facebook_likes <- BoxCox(movies1$actor_2_facebook_likes, a2fl_lambda)
+imdb_score <- BoxCox(movies1$imdb_score, imdb_lambda)
+adj_budget <- BoxCox(movies1$adj_budget, ab_lambda)
+
+movies2 <- data.frame(duration, director_facebook_likes, actor_3_facebook_likes, actor_1_facebook_likes, num_voted_users, cast_total_facebook_likes, actor_2_facebook_likes, imdb_score, adj_budget)
+```
+
+
+```{r,echo=FALSE}
+par(mar = rep(2, 4), mfrow = c(3, 4))
+for (i in 1:length(movies1))
+{
+    plot(density(movies1[, i]), main = colnames(movies1)[i])
+}
+
+par(mar = rep(2, 4), mfrow = c(3, 4))
+for (i in 1:length(movies2))
+{
+    plot(density(movies2[, i]), main = colnames(movies2)[i])
+}
+```
+
+
+```{r,echo=FALSE}
+movies2 <- cbind(movies2, movies1$adj_gross)
+colnames(movies2)[10] <- "adj_gross"
+m2 <- lm(adj_gross ~ ., data = movies2) 
+m2_back <- step(m2, trace = 0)
+
+summary(m2_back)
+
+par(mfcol=c(2,2))
+plot(m2_back)
+
+AIC(m2_back)
+logLik(m2_back)
+par(mar = rep(4, 4), mfcol=c(1,2))
+
+
+hist(movies2$adj_gross, xlab = "Actual Gross", ylab = "Number of Movies", xlim=c(0, 5E8))
+hist(fitted(m2_back), xlab = "Predicted Gross", ylab = "Number of Movies")
+
+hist(m2_back$residuals)
+skewness(m2_back$residuals)
+```
+
+
+```{r,echo=FALSE}
+movies$profit_margin <- movies$adj_margin / movies$adj_gross
+movies_copy <- movies
+movies_copy$duration <- duration
+movies_copy$director_facebook_likes <- director_facebook_likes
+movies_copy$actor_3_facebook_likes <- actor_3_facebook_likes
+movies_copy$actor_1_facebook_likes <- actor_1_facebook_likes
+movies_copy$num_voted_users <- num_voted_users
+movies_copy$cast_total_facebook_likes <- cast_total_facebook_likes
+movies_copy$actor_2_facebook_likes <- actor_2_facebook_likes
+movies_copy$imdb_score <- imdb_score
+movies_copy$adj_budget <- adj_budget
+
+gross_p <- predict(m2_back, newdata = movies_copy, type = "response")
+
+#movies$profit_margin <- (movies$adj_gross - movies$adj_budget) / movies$adj_gross
+profit_margin_p <- (gross_p - movies$adj_budget) / gross_p
+
+movies_profit <- data.frame(movies$movie_title, movies$adj_gross, gross_p, movies$profit_margin, profit_margin_p)
+
+
+colnames(movies_profit) <- c("Movie Title", "Actual Adjusted Gross", "Predicted Gross", "Actual Profit Margin", "Predicted Profit Margin")
+
+head(movies_profit)
+```
+
+
+This line of code just to prove that, there is no correlation between the quality of the moview with 
+```{r,echo=FALSE}
+cor.test(movies$imdb_score, movies$profit_margin, conf.level = 0.95)
+```
 
 Smooth Operators - All Done!  
 
