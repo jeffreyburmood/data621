@@ -47,13 +47,17 @@ cpi <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/da
 names(cpi)<-c("title_year","cpi")
 
 # Remove the columns not being used in the analysis
-col.remove <- c(1,2,3,7,10,11,15,17,18,19,20,21,27,28)
+col.remove <- c(1,2,3,7,10,11,15,17,18,19,20,27,28)
 movies <- subset(movies.raw,select=-col.remove)
 
 # there are only a few NAs, go ahead and remove rows with NAs
 movies <- na.omit(movies)
 
 movies$movie_title <- iconv(movies$movie_title, "latin1", "ASCII", sub="")
+
+#Removing Foreign Films
+movies <-subset(movies, country == "USA")
+movies <- subset(movies, select = -country)
 ```
   
 To this point we've removed the data columns for the variables that we will not be using in the analysis. The columns remaining in the data set are the following:  
