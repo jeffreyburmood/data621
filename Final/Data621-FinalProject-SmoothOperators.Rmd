@@ -11,19 +11,20 @@ output: pdf_document
 
 ##Abstract 
 
-Movies: The quintessential form of story telling that we as humans, have developed thus far. They have become the modern past-time for us, a way to escape the humdrum of everyday life into a fantasy world filled with drama, intrique and delight. Movies have astonding audience for the best part of a century, and with that, have become a vast and lucrative industry. Studios, actors and actresses, directors, and production companies make up just a small part of world of film, and we had hope that looking into some movie data we would be able to find some insight. As avid fans and lovers of all films, we decided that this project would provide us both entertainment, and revelation into a fascinated world.
+*Movies:* The quintessential form of storytelling that we as humans, have developed thus far.  Movies have become the modern past-time for us, a way to escape the humdrum of everyday life into a fantasy world filled with drama, intrigue and delight. Movies have astounded audiences for the best part of a century, and with that, movie making has become a vast and lucrative industry.  Studios, actors and actresses, directors, and production companies make up just a small part of world of film, and we hope by looking into some movie data we will be able to find some insights into that world. Finally, as avid fans and lovers of all films, we hope this report will both entertain you and reveal new insights into a fascinating world.
+
 
 ##Problem Description  
   
-Our final project will explore, analyze and model a data set containing information on approximately 5,000 movies. The dataset contains movie data extracted from the IMDB website and is available on Kaggle.com.
+In this project, we explore, analyze and model a dataset containing information on approximately 5,000 movies. The dataset contains movie data extracted from the IMDB website and is available on Kaggle.com.
 
-The project will develop predictive models for three questions:  
+We develop predictive models for three questions:  
   
 1) Will the movie make money or lose money?  
   
 2) What is the anticipated gross margin (profit) for the movie?
 
-3) Are there any particular genres/keywords that influence profitability?
+3) Do any particular movie content keywords influence profitability?
 
 
 \begin{center}
@@ -32,7 +33,8 @@ The project will develop predictive models for three questions:
   
 ##Data Exploration
 
-The first part of our project consists of explored our data source. As stated above, it came from Kaggle, a repository/social hub for data analyst like ourselves. The dataset isn't, by any stretch of the imagination 
+The first part of our project consists of exploring our data source. As stated above, it came from Kaggle, a repository/social hub for data analysts like ourselves.  Obviously the dataset isn't complete, since thousands of movies are released each year.
+
   
 ```{r,echo=FALSE}
 # Load required libraries
@@ -53,6 +55,8 @@ suppressWarnings(suppressMessages(library(broom)))
 suppressWarnings(suppressMessages(library(lmtest)))
 suppressWarnings(suppressMessages(library(moments)))
 suppressWarnings(suppressMessages(library(forecast)))
+suppressWarnings(suppressMessages(library(data.table)))
+
 
 # Read in the dataset from github
 movies.raw <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/master/Final/movie_metadata.csv"),header=TRUE,na.strings=c(""," "), stringsAsFactors = FALSE)
@@ -75,17 +79,17 @@ movies <-subset(movies, country == "USA")
 movies <- subset(movies, select = -country)
 ```
   
-To this point we've removed the data columns for the variables that we will not be using in the analysis. The columns that we will focus on are the following:  
+First we remove the data columns for the variables that we will not be using in the analysis.  We focus on the following variables:  
   
 ```{r,echo=FALSE}
 names(movies)
 ```
   
-After exploring the data, we noticed there is a scattering of NAs across the variables. Due to the relatively low number of total NAs, we choose to remove all rows with NAs, leaving 3,828 rows of data. 
+After exploring the data, we notice there is a scattering of NAs across the variables. Due to the relatively low number of total NAs, we remove all rows with NAs, leaving 3,828 rows of data. 
 
-Furthermore, we noticed aproximately 800 foreign films. Though we would have loved these to be apart of our data source, we realized that the budget and gross variables for these films tended to differ dramatically. We saw that the budget was usually in the currency of the country while the gross tended to be in USA dollars. Because trying to adjust for currency differences across several year, we felt it best to remove this data for simplicity sake. This left us with 3042 movies to analyse, which we felt was more than adequate for the project. 
+Furthermore, we notice approximately 800 foreign films. Though we would love for these to be part of our dataset, the production budget and gross receipts variables for these films tend to differ dramatically.  The budget is usually in the currency of the home country whereas the gross receipts tend to be in U.S. dollars.  Because of the unwieldiness of adjusting for multiple currency exchange rates across many years on a case-by-case basis, we must remove this data.  This leaves us with 3042 movies to analyze, which we feel is more than adequate for the project. 
   
-Next we will explore the nature of the data for the variables we will be using in the analysis.  
+Next we explore the nature of the data for the variables to be used in the analysis.  
   
 ```{r,echo=FALSE,fig.width = 8, fig.height = 3}
 # Let's start by exploring the type of each variable
@@ -103,7 +107,9 @@ kable(summary(movies[,11:14]))
 ```
 
 
-We also wanted to investigate the correlations, and we can see that none of the variables have any correlation that we can percieve.
+We investigate correlations. Below, we can see that none of the variables have significant correlation that we can perceive.  
+
+
 ```{r,echo=FALSE,fig.width = 8, fig.height = 3}
 # grab just the numeric data columns for variable analysis
 movies.numeric <- subset(movies,select=-c(6,10))
@@ -118,7 +124,9 @@ kable(cor.table[,9:10])
 
 
 
-Lastly for exploration, we looked at all our variables through boxplots, histograms, and scatter plots. 
+Lastly for exploration, we examine all variables using boxplots, histograms, and scatter plots.  
+
+
 ```{r,echo=FALSE,fig.width = 8, fig.height = 3}
 # Look at the boxplots of the numeric variables
 f <- colnames(movies.numeric)  # establish the data categories to be studied
@@ -142,14 +150,11 @@ for (i in 1:length(f)){
 }
 ```
   
-As we can see from the plots and statistical summary, most of the variables have a reasonable distribution except those variable associated with the Facebook likes. There are five variables related to Facebook likes that are highly skewed due to a large number of zeros. While examining the dataset source, they revealed that along of the "zero" values from the facebook likes were caused by simple errors in the scraping. At this point we assume these zeros represent NAs in the Facebook data.  
-
-  
-Next, we'll use the mice package to impute the Facebook likes data for the zeros/NAs.
+As we can see from the plots and statistical summaries above, most of the variables are nearly normally distributed except those variables associated with Facebook Likes.  There are five variables related to Facebook Likes that are highly skewed due to a large number of zeros.  An examination of the dataset source reveals that the "zero" values from the Facebook Likes were caused by simple errors in Web page scraping.  At this point we assume these zeros represent NAs in the Facebook data, and we use the MICE package to impute the Facebook Likes data for the zeros/NAs.
   
 
 ```{r,echo=FALSE}
-# build a dataframe of just the facebook likes data
+# build a dataframe of just the Facebook Likes data
 facebook.likes <- data.frame(director_facebook_likes=movies$director_facebook_likes,actor_1_facebook_likes=movies$actor_1_facebook_likes,actor_2_facebook_likes=movies$actor_2_facebook_likes,actor_3_facebook_likes=movies$actor_3_facebook_likes,cast_total_facebook_likes=movies$cast_total_facebook_likes)
 # now convert all of the zero values to "NA"
 facebook.likes <- sapply(facebook.likes, function(x) ifelse(x==0,NA,x))
@@ -177,14 +182,15 @@ summary(movies)
 
 ##Data Preparation  
 
-One of the big issues faced when using this dataset is the time frame. These movies were collected over the past 80+ years, and the following shows our distribution over time: 
+One of the big issues with using this dataset is the time-frame. These movies were released over the past 80+ years. The following histogram shows the distribution of movies released by year.  
+
 
 ```{r,echo=FALSE}
 hist(movies$title_year,main = "Year Released",xlab="")
 ```
   
 
-As you can see, the vast majority came from 1990s and above, but we can't discredit the movies from previous year. In order to accurately portray elements from the past, we have instituted a rate of inflation calculation. Using the consumer price index (for our part here we are making a crucial assumption, that all dollars are calculated based on US currency, and we are ignoring even more complex foreign exchange rates of the time), we can calculate the gross value per year. As a basis of comparison, we are using the CPI index from 2016, as the last movie was made in 2016. 
+As you can see, the vast majority come from the 1990's and later, but we don't want to ignore the movies from previous years.  In order to accurately portray data values from the more distant past, we institute a rate of inflation calculation.  Using the Consumer Price Index released by the U.S. Bureau of Labor Statistics, we calculate the adjusted production budget and gross receipts values by year. As a basis of comparison, we use the CPI from 2016, since the last movie was released in 2016. 
 
 
 ```{r,echo=FALSE}
@@ -196,22 +202,25 @@ movies$adj_margin <- with(movies, adj_gross-adj_budget)
 
 ```{r,echo=FALSE,fig.width = 8, fig.height = 4}
 attach(movies)
-par(mfrow=c(2,1))
+#par(mfrow=c(2,1))
 plot(title_year,gross, main="Unadjusted Gross Per Year")
 plot(title_year,adj_gross,main="Adjusted Gross Per Year")
 ```
 
-From the above graphs, we can see that the adjustment for the gross did indeed create a more uniformed dataset (where as before we saw movies increasing over the years). As a point of interest, the movies that made over a billion dollars are shown below:
+From the above scatter plots, we can see that the adjustment for inflation does indeed create a more realistic picture of overall movie business revenues.  (U.S. movie ticket buys peaked around 1940 and have been shrinking ever since.)  
+
+As a point of interest, the movies that made over one billion dollars (U.S. receipts only, adjusted) are shown below:
+
 
 ```{r,echo=FALSE}
 highest_gross <- subset(movies, adj_gross > 1000000000, select=c("movie_title", "gross", "adj_gross"))
 highest_gross
 ```
 
-A quick Google search indicates that the above movies are consistently listed as the top grossing movies of all time. Furthermore, our "estimated adjusted gross" mimics the findings that we see with adjusted gross (for the most part, there are two schools of thought on how to adjust gross, using ticket prices or our method adjusting based on CPI). Though our dollar amount vary slightly from other sources, any variance is consistent across our dataset, and would not negatively impact on the overall results.   
+A quick Google search indicates that the above movies are consistently listed as the top grossing movies of all time. Furthermore, our "estimated adjusted gross" mimics the findings that we see with adjusted gross (for the most part, there are two schools of thought on how to adjust gross, using ticket prices or our method adjusting based on CPI). Though our dollar amounts vary slightly from other sources, any variance is consistent across our dataset, and would not negatively impact the overall results.   
 
 ```{r,echo=FALSE}
-boxplot(movies$adj_margin, main ="Profit Margin")
+#boxplot(movies$adj_margin, main ="Profit Margin")  #Rob commented, not sure of context
 ```
 
 
@@ -222,9 +231,10 @@ boxplot(movies$adj_margin, main ="Profit Margin")
 
 ### Binomial Regression 
 
-Our first model we want to investigate is whether or not we can predict if film will make money given the cast and direction. To do this, we decided to create a binary regression model, transforming our adjusted margin into a simple binary: 0 equals a loss of money, 1 equals a proft.
+In our first model we investigate whether or not we can predict if a film will make a profit, given the cast and direction.  To do this, we create a binary regression model, transforming our adjusted margin into a simple binary choice: 0 equals a loss of money, 1 equals a profit.  This could be thought of as a "Go / No-Go" model.
 
-Below we utilized a binomial model with the logistic  regression function in R.  
+Below we utilize the binomial logistic regression function in R to create the "Go / No-Go" model.
+
   
 ```{r,echo=FALSE}
 # Now we're ready to explore model building. In preparation, split the dataset into a training set
@@ -262,7 +272,9 @@ auc
 ```
 
 
-Using all the prediction variables at hand, the model accurately predicts 74% of the time. Using backward stepwise regression, we attempted to remove some variables that may not have had significance in our model.
+Using all the prediction variables at hand, the "Go / No-Go" model accurately predicts profitability 74% of the time.  
+
+Next, using backward stepwise regression, we attempt to remove some variables that may not have significance in our model.
 
 ```{r,echo=FALSE}
 backward <- step(bin_movie)
@@ -278,11 +290,11 @@ abline(a = 0, b = 1)
 auc_back
 ```
 
-As you can see the using backward stepwise regression produced slightly better AIC scores, however, the AUC decreased, but minimially. Another revelation, was that the Director Facebook score was not a signficant factor in our model, and was thus removed by the backward stepwise regression. It appears that for our purposes here, the actors facebook likes were better indicators of profitability that directors, which goes to show how the industry has unfolded. A few directors may have become prominent in our culture, but the recognizability of actors and actresses have a greater pull on whether or not a movie will make money. 
+As you can see, using backward stepwise regression produces slightly better AIC scores.  However, the AUC decreases slightly, which is undesirable.  Another revelation is that the Director Facebook Likes score is not a significant variable in our model, and is thus removed by the backward stepwise regression process.  It appears that for our purposes here, the actors' Facebook Likes are better indicators of profitability than Directors', which goes to show how the industry has unfolded.  A few directors have become prominent in our culture, but the recognizability of actors and actresses determines more strongly whether or not a movie will make money.   
 
-As a final step, we used a confusion matrix to show the relative strength of our model.
+As a final step, we use a confusion matrix to show the relative strength of our model.
 
-```{r}
+```{r, echo=FALSE}
 #Creating confusion matrix
 bin_prediction <- ifelse(p > 0.5, 1, 0)
 confusion_bin <- confusionMatrix(data = bin_prediction, reference = test[,10])
@@ -304,11 +316,14 @@ kable(data.frame(Parameters, Model1))
 ```
 
 
-###Profit Margin Model
+--------
 
-We now have a model to give us an insight if a particular movie is going to make money or loss money. However, from a movie investor's perspective, that information is not sufficient to make up his or her mind to go into that business. Therefore, another focus of our final project to build a model that can predict how much money each movie makes (gross margin) or otherwise. 
 
-Below we built multivariable linear regression model without any data transformation. 
+###Gross Margin Model
+
+We now have a prediction model for whether a particular movie will make money or not.  However, from a movie investor's perspective, that information is not sufficient to make a decision about which movie is the most attractive to fund when faced with multiple options.  Therefore, another focus of our final project is to build a model that attempts to predict how much money a movie will make (Gross Margin). 
+
+Below we build a multivariable linear regression model for Gross Margin, without any data transformation. 
 
 ```{r,echo=FALSE}
 #Extract all numerical variables. Take care of na and excessive zeros.  
@@ -316,12 +331,13 @@ movies1 <- Filter(is.numeric, movies)
 colSums(sapply(movies1, is.na))
 colSums(sapply(movies1, function(x) return (x == 0)))
 
-#Elminate title_year, gross, facenumber_in_poster(too many zeros), budget, cpi
+#Eliminate title_year, gross, facenumber_in_poster(too many zeros), budget, cpi
 movies1 <- subset(movies1, select = -c(1, 6, 9, 10, 13))
 ```
 
 
-The first model we created does not show good performance. The AIC is 121904.1, BIC is 121970.4 and  logLik is -60941.07. After we take a look at the histogram of the residuals plot, we realized it is highly skewed to the right. The skewness is as high as 13.65786
+Our first attempt at a Gross Margin model does not show good performance. The AIC is 121904.1, BIC is 121970.4 and  logLik is -60941.1. After we take a look at the histogram of the residuals plot, we realize it is highly skewed to the right. The skewness is as high as 13.7.  
+
 ```{r,echo=FALSE}
 #Also exclude adj_margin when building the model, because it is simply the linear combinations of the other two variables, adj_gross and adj_budget.
 m1 <- lm(adj_gross ~. - adj_margin, data = movies1) 
@@ -337,7 +353,8 @@ skewness(m1_back$residuals)
 ```
 
 
-The bad performance is most likely due to the abnormal skewness and kurtosis from the original data. Therefore, we adopted Box-Cox transformation based on normality assumption.
+The weak performance is most likely due to the abnormal skewness and kurtosis from the original data. Therefore, we attempt to correct the problem by employing Box-Cox transformation.  
+
 ```{r,echo=FALSE}
 duration_bc <- boxcox(movies1$duration ~ 1, plotit = FALSE)  
 duration_lambda <- with(duration_bc, x[which.max(y)])
@@ -373,7 +390,9 @@ movies2 <- data.frame(duration, director_facebook_likes, actor_3_facebook_likes,
 ```
 
 
-The following code is just comparing distributions of the two datasets. One is dataset before transformation, then the second one is the dataset after transformation. From the comparison, we clearly notice Box-Cox transformation approximately normalize the data.
+The following compares distributions of the two datasets. The first is the dataset before transformation; the second, after.  
+
+*Before Transformation:*  
 
 ```{r,echo=FALSE}
 par(mar = rep(2, 4), mfrow = c(3, 4))
@@ -381,7 +400,13 @@ for (i in 1:length(movies1))
 {
     plot(density(movies1[, i]), main = colnames(movies1)[i])
 }
+```
+  
+  
+*After transformation:*  
 
+
+```{r,echo=FALSE}
 par(mar = rep(2, 4), mfrow = c(3, 4))
 for (i in 1:length(movies2))
 {
@@ -389,7 +414,10 @@ for (i in 1:length(movies2))
 }
 ```
 
-Our second model has very similar AIC, BIC, and loglikelyhood values. However, the skewness of the residual histogram has been reduced. This has indicated the second model is a better model compare to the first one.
+From this comparison we can observe that the Box-Cox transformation approximately normalizes the data, so we proceed.  
+
+Our second attempt at the Gross Margin model has very similar AIC, BIC, and loglikelihood values as the first.  However, the skewness of the residual histogram is reduced.  Therefore, the second attempt is a superior model.    
+
 
 ```{r,echo=FALSE}
 movies2 <- cbind(movies2, movies1$adj_gross)
@@ -407,7 +435,9 @@ skewness(m2_back$residuals)
 ```
 
 
-The following code is just the data preparation step for evaluation before we apply our model. Finally, we create a master dataframe containing our predicted results and actual data.
+We apply the corrected values to our model.  Finally, we create a master dataframe containing our predicted results and actual data.  
+
+
 ```{r,echo=FALSE}
 #Add new variable profit_margin to the original movie datasets. According to investopedia, profit_margin =  net profit / revenue. For the purpose of simplisity, here we use adjusted margin to be our net profit and adjusted gross to be our revenue
 movies$profit_margin <- movies$adj_margin / movies$adj_gross
@@ -440,23 +470,192 @@ colnames(movies_profit) <- c("Movie Title", "Actual Adjusted Gross", "Predicted 
 ```
 
 
-Final output
-```{r}
+Final output of Gross Margin model:  
+
+```{r,echo=FALSE}
 head(movies_profit)
 ```
 
 
-The predicted profit margin variable will serve as a reference for investors to decide if they want to contriubte to the production of the movies and share the profit that is generated. 
+The predicted profit margin variable can serve as a reference for investors to decide if they want to contribute to the production of a movie and share the profit that is generated.  
 
-Since we have the actual profit margin variable available to us, it will also be really interesting to investigate if the quality of the movies will have any imapcts on the profitability of the movies. We will like to use IMDB rating as a standard representing movie quality.
-
-
-This line of code just proves that there exists very weak positive relationship between quality and profitability of movies. The p-value is 0.007905, which is less than the significance level of 0.05. In addition, the 95% confidence interval is (0.01263244, 0.08354498), which does not cross zero. It also shows the result is statistically significant. However, the correlation coefficient is only 0.04814938, which is a very weak association between the two variable. 
-
-Therefore, if investors care more about profitability, it is recommended not to care too much about the quality of the movie. Spending huge amount of money on improving the movie quality will lead the expected return that is minuscule.
+Since we have the actual profit margin variable available to us, we can also investigate if the quality of the movie will have any impact on the profitability of the movie. We use the IMDB rating as an analog for movie quality.  
 
 ```{r,echo=FALSE}
 cor.test(movies$imdb_score, movies$profit_margin, conf.level = 0.95)
 ```
+
+The result above suggests only a weak positive relationship between the quality and profitability of movies.  The p-value is 0.007905, which is less than the significance level of 0.05. In addition, the 95% confidence interval is (0.01263244, 0.08354498), which does not cross zero.  It also shows the result is statistically significant.  However, the correlation coefficient is only 0.048 (about 5% higher profit), which is a weak association between the two variables. 
+
+Therefore, if investors care more about profitability, it is recommended not to care too much about the quality of the movie. Spending huge amounts of money on improving movie quality may lead to minuscule returns.
+
+
+--------
+
+
+###Plot Keywords
+
+The Kaggle dataset includes a nefarious-looking collection of plot keywords for each movie.  We could not resist exploring them.  
+
+To do so required some manual cleanup of typo's, duplicates, and the addition of a small amount of information from Ian Cavalier's Filmometer, as well as IMDB's Parent's Guide.  We also have an additional variable called Movie Scale, which categorizes each movie into one of four groups:
+
+```
+Movie Scale -|- CPI-Adjusted Budget
+-------------|------------------------------
+Tiny         |  Less than 5 million
+Small        |  Between 5 and 25 million
+Medium       |  Above 25, Below 100 million
+Large        |  100 million and above
+-------------|------------------------------
+```
+
+```{r, echo=FALSE}
+
+movies.US.raw <- read.csv(text=getURL("https://raw.githubusercontent.com/jeffreyburmood/data621/final_rob1/movies_US.csv"),header=TRUE,na.strings=c(""," "), stringsAsFactors = FALSE)
+
+movies.US <- na.omit(movies.US.raw)
+movies.US$movie_title <- iconv(movies.US$movie_title, "latin1", "ASCII", sub="")
+
+movies.US$content_rating <- factor(movies.US$content_rating)
+movies.US$movie_scale <- factor(movies.US$movie_scale)
+movies.US$nudity <- factor(movies.US$nudity)
+
+
+set.seed(121)
+smp_size <- floor(0.80 * nrow(movies.US))
+## set the seed to make your partition reproductible
+train_ind <- sample(seq_len(nrow(movies.US)), size = smp_size)
+train.US <- movies.US[train_ind, ]
+test.US <- movies.US[-train_ind, ]
+
+
+#split the movies into four groups, based on the production budget
+tiny.US <- subset(train.US, movie_scale == 'tiny')
+small.US <- subset(train.US, movie_scale == 'small')
+medium.US <- subset(train.US, movie_scale == 'medium')
+large.US <- subset(train.US, movie_scale == 'large')
+
+
+```
+
+
+To get some idea of where to start looking, we use a free online tool called TagCrowd to paint word clouds of movie genre and keywords by movie scale:
+
+
+![](https://raw.githubusercontent.com/jeffreyburmood/data621/master/Final/movie_keywords.png)
+
+
+Tiny movie genres and keywords are shown top left, followed by small films to the right.  Medium and large films are in the bottom two blocks.
+Within each block, successfilm film genres and keywords are shown on top, and unsuccessful ones below.
+
+There are many questions one could ask about this information.  Some examples:
+
+1. For tiny-budget films, do male-oriented crime films with graphic sex and violence perform better at the box office than films about female relationships?  
+2. For large films, does escapism trump realism?
+3. Is there a limited U.S. audience for films with nudity?  This seems to be the opposite of "sex sells." 
+
+Since nudity is a kind of fun and perhaps taboo topic that weaker souls than us would carefully avoid writing about in a graduate student paper on regression analysis, let's tackle question 3.  
+
+
+We split each budget category into two groups - movies with nudity and movies without. (Note: Some external sources were used to scrub the quality of the keywords for this variable).  
+
+Our variable "Gross Over Budget" is the adjusted gross receipts of the movie (U.S. Box Office only) divided by the adjusted production budget.  While this is not an indicator of the true profitability of the movie because it doesn't include foreign screenings, DVD sales, etc, it does help provide a rough proportional gross margin percentage.  
+
+*Movies without nudity: (V1 = Gross Over Budget)*
+
+```{r,echo=FALSE}
+
+
+#Lets look at the potential commercial impact of nudity across the four budget categories
+nud.US <- subset(train.US, nudity == 'y')
+dress.US <- subset(train.US, nudity == 'n')  #ASSIST from http://iancavalier.com/filmometer/reviews/genre/sexual
+
+
+library(data.table)
+# to Compare the profitability of movies without nudity...
+dtd <- data.table(dress.US)
+setkey(dtd,movie_scale)
+dtd[,mean(gross_over_budget),by=movie_scale]
+```
+
+*Counts:*
+
+```{r, echo=FALSE}
+dtd[,length(gross_over_budget),by=movie_scale]
+
+```
+
+
+*Movies with nudity: (V1 = Gross Over Budget)*
+
+```{r, echo=FALSE}
+#...to movies with nudity:
+dtn <- data.table(nud.US)
+setkey(dtn,movie_scale)
+dtn[,mean(gross_over_budget),by=movie_scale]
+```
+
+*Counts:*
+
+```{r, echo=FALSE}
+
+dtn[,length(gross_over_budget),by=movie_scale]
+
+```
+
+
+We can see a kind of auto-filtering going on here in the industry.  Only nine large movies include nudity, while 337 do not!  98% of large films avoid nudity at all costs.  Among medium budget films, only about 7% include nudity, and about 11% of small and tiny films do.  
+
+Furthermore, we can see that the average gross margin percents are lower for all categories of movies with nudity, except small budget. Among large and medium films, the difference is about 16%! Tantalizing...
+
+We create some linear regression models to determine if these results are significant:  
+
+
+```{r, echo=FALSE}
+
+
+#Let's create models to see if the differences are significant.
+ 
+mtiny <- lm(gross_over_budget ~ content_rating + imdb_score + num_critic_for_reviews + num_user_for_reviews +nudity, tiny.US)
+summary(mtiny)
+
+msmall <- lm(gross_over_budget ~ content_rating + imdb_score + num_critic_for_reviews + num_user_for_reviews +nudity, small.US)
+summary(msmall)
+
+mmedium <- lm(gross_over_budget ~ content_rating + imdb_score + num_critic_for_reviews + num_user_for_reviews +nudity, medium.US)
+summary(mmedium)
+
+mlarge <- lm(gross_over_budget ~ content_rating + imdb_score + num_critic_for_reviews + num_user_for_reviews +nudity, large.US)
+summary(mlarge)
+
+```
+
+
+According to the models, there is no statistical significance to the variable Nudity at any of the budget sizes!  
+
+
+Of the factors considered, for tiny and small budget movies, the number of user reviews is the most significant and helpful variable for profitability.  For medium and large budget films, the number of user reviews remains important but the IMDB score enters the picture as far more impacting.  
+
+
+It would be interesting to find out why the IMDB score is not significant for tiny and small movies, but it is very significant for 
+medium and large movies.
+
+
+The lesson learned is simple - just because the average value of one group is different from another does not mean there is a significant difference between them.  In this case, the sample size may be too low.  If time permitted, more sophisticated techniques, such as zero-inflated models, could be deployed.  
+
+
+--------
+
+
+Concluding Thoughts:  
+
+
+There are many companies doing very sophisticated analysis to assess the viability of potential movie projects.  One is called The Numbers.  It uses a data source called Opus Data.  The models are very intricate.   
+
+It is impossible to create competitive models with a sample dataset like ours, but it is also kind of amazing that we were able to create a "Go No/Go" model with 74% accuracy, and a robust framework for predicting gross margin percentage for a given movie.  We also had a little fun illustrating the dangers of using simple averages to prove a point, rather than robust modeling.  We hope you learned some new things about the movie business and had fun doing so!
+
+
+--------
+
 
 Smooth Operators - All Done!  
