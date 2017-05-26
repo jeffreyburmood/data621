@@ -5,15 +5,25 @@ date: "5/26/2017"
 output: pdf_document
 ---
 
+\begin{center}
+{\huge Introduction}
+\end{center}
+
+##Abstract 
+
+Movies: The quintessential form of story telling that we as humans, have developed thus far. They have become the modern past-time for us, a way to escape the humdrum of everyday life into a fantasy world filled with drama, intrique and delight. Movies have astonding audience for the best part of a century, and with that, have become a vast and lucrative industry. Studios, actors and actresses, directors, and production companies make up just a small part of world of film, and we had hope that looking into some movie data we would be able to find some insight. As avid fans and lovers of all films, we decided that this project would provide us both entertainment, and revelation into a fascinated world.
+
 ##Problem Description  
   
 Our final project will explore, analyze and model a data set containing information on approximately 5,000 movies. The dataset contains movie data extracted from the IMDB website and is available on Kaggle.com.
 
-The project will develop predictive models for two questions:  
+The project will develop predictive models for three questions:  
   
-1) Will the movie make money, lose money, or break even (approximately)?  
+1) Will the movie make money or lose money?  
   
-2) What is the anticipated gross margin (profit) for the movie?  
+2) What is the anticipated gross margin (profit) for the movie?
+
+3) Are there any particular genres/keywords that influence profitability?
 
 
 \begin{center}
@@ -21,6 +31,8 @@ The project will develop predictive models for two questions:
 \end{center}
   
 ##Data Exploration
+
+The first part of our project consists of explored our data source. As stated above, it came from Kaggle, a repository/social hub for data analyst like ourselves. The dataset isn't, by any stretch of the imagination 
   
 ```{r,echo=FALSE}
 # Load required libraries
@@ -55,6 +67,7 @@ movies <- subset(movies.raw,select=-col.remove)
 # there are only a few NAs, go ahead and remove rows with NAs
 movies <- na.omit(movies)
 
+#Remove's Unicode Error for PDF Latex
 movies$movie_title <- iconv(movies$movie_title, "latin1", "ASCII", sub="")
 
 #Removing Foreign Films
@@ -62,13 +75,15 @@ movies <-subset(movies, country == "USA")
 movies <- subset(movies, select = -country)
 ```
   
-To this point we've removed the data columns for the variables that we will not be using in the analysis. The columns remaining in the data set are the following:  
+To this point we've removed the data columns for the variables that we will not be using in the analysis. The columns that we will focus on are the following:  
   
 ```{r,echo=FALSE}
 names(movies)
 ```
   
-After exploring the data, we noticed there is a scattering of NAs across the variables. Due to the relatively low number of total NAs, we choose to remove all rows with NAs, leaving 3,828 rows of data.  
+After exploring the data, we noticed there is a scattering of NAs across the variables. Due to the relatively low number of total NAs, we choose to remove all rows with NAs, leaving 3,828 rows of data. 
+
+Furthermore, we noticed aproximately 800 foreign films. Though we would have loved these to be apart of our data source, we realized that the budget and gross variables for these films tended to differ dramatically. We saw that the budget was usually in the currency of the country while the gross tended to be in USA dollars. Because trying to adjust for currency differences across several year, we felt it best to remove this data for simplicity sake. This left us with 3042 movies to analyse, which we felt was more than adequate for the project. 
   
 Next we will explore the nature of the data for the variables we will be using in the analysis.  
   
@@ -82,10 +97,16 @@ kable(types.df)
 movies$content_rating <- factor(movies$content_rating)
 
 # Show a statistical summary of the data
-summary(movies)
+kable(summary(movies[,1:5]))
+kable(summary(movies[,6:10]))
+kable(summary(movies[,11:14]))
+```
 
+
+We also wanted to investigate the correlations, and we can see that none of the variables have any correlation that we can percieve.
+```{r,echo=FALSE,fig.width = 8, fig.height = 3}
 # grab just the numeric data columns for variable analysis
-movies.numeric <- subset(movies,select=-c(6,10,24))
+movies.numeric <- subset(movies,select=-c(6,10))
 
 # start by looking for correlations between the numeric variables (ONLY the predictor variables)
 movies.pred <- subset(movies.numeric, select=-c(5))
@@ -93,10 +114,15 @@ cor.table <- cor(movies.pred) # build a table of inter-variable correlation valu
 kable(cor.table[,1:4])
 kable(cor.table[,5:8])
 kable(cor.table[,9:10])
+```
 
+
+
+Lastly for exploration, we looked at all our variables through boxplots, histograms, and scatter plots. 
+```{r,echo=FALSE,fig.width = 8, fig.height = 3}
 # Look at the boxplots of the numeric variables
 f <- colnames(movies.numeric)  # establish the data categories to be studied
-par(mfrow=c(1,2))
+par(mfrow=c(1,3))
 
 for (i in 1:length(f)){
   boxplot(movies.numeric[,i],main = f[i])
@@ -116,7 +142,7 @@ for (i in 1:length(f)){
 }
 ```
   
-As we can see from the plots and statistical summary, most of the variables have a reasonable distribution except those variable associated with the Facebook likes. There are five variables related to Facebook likes that are highly skewed due to a large number of zeros. At this point we assume these zeros represent NAs in the Facebook data.  
+As we can see from the plots and statistical summary, most of the variables have a reasonable distribution except those variable associated with the Facebook likes. There are five variables related to Facebook likes that are highly skewed due to a large number of zeros. While examining the dataset source, they revealed that along of the "zero" values from the facebook likes were caused by simple errors in the scraping. At this point we assume these zeros represent NAs in the Facebook data.  
 
   
 Next, we'll use the mice package to impute the Facebook likes data for the zeros/NAs.
@@ -141,7 +167,6 @@ movies$actor_3_facebook_likes <- facebook.likes$actor_3_facebook_likes
 movies$cast_total_facebook_likes <- facebook.likes$cast_total_facebook_likes
 
 summary(movies)
-
 ```
 
 
@@ -152,7 +177,7 @@ summary(movies)
 
 ##Data Preparation  
 
-One of the big issues faced in when using this dataset is the time frame. These movies were collected over the past 80+ years, and the following shows our distribution over time: 
+One of the big issues faced when using this dataset is the time frame. These movies were collected over the past 80+ years, and the following shows our distribution over time: 
 
 ```{r,echo=FALSE}
 hist(movies$title_year,main = "Year Released",xlab="")
@@ -169,7 +194,7 @@ movies$adj_budget <- with(movies, (240/cpi * budget))
 movies$adj_margin <- with(movies, adj_gross-adj_budget)
 ```
 
-```{r,echo=FALSE}
+```{r,echo=FALSE,fig.width = 8, fig.height = 4}
 attach(movies)
 par(mfrow=c(2,1))
 plot(title_year,gross, main="Unadjusted Gross Per Year")
@@ -183,10 +208,10 @@ highest_gross <- subset(movies, adj_gross > 1000000000, select=c("movie_title", 
 highest_gross
 ```
 
-A quick Google search indicates that the above movies are consistently listed the top grossing movies of all time. Furthermore, our "estimated adjusted gross" mimics the findings that we see with adjusted gross (for the most part, there are two schools of thought on how to adjust gross, using ticket prices or our method adjusting based on CPI). Though our dollar amount vary slightly from other sources, any variance is consistent across our datase.   
+A quick Google search indicates that the above movies are consistently listed as the top grossing movies of all time. Furthermore, our "estimated adjusted gross" mimics the findings that we see with adjusted gross (for the most part, there are two schools of thought on how to adjust gross, using ticket prices or our method adjusting based on CPI). Though our dollar amount vary slightly from other sources, any variance is consistent across our dataset, and would not negatively impact on the overall results.   
 
 ```{r,echo=FALSE}
-boxplot(movies$adj_margin)
+boxplot(movies$adj_margin, main ="Profit Margin")
 ```
 
 
@@ -197,7 +222,9 @@ boxplot(movies$adj_margin)
 
 ### Binomial Regression 
 
-Our first model we want to investigate is whether or not we can predict if film will make money given the cast and direction. To do this, we decided to create a binary regression model, transforming our adjusted 
+Our first model we want to investigate is whether or not we can predict if film will make money given the cast and direction. To do this, we decided to create a binary regression model, transforming our adjusted margin into a simple binary: 0 equals a loss of money, 1 equals a proft.
+
+Below we utilized a binomial model with the logistic  regression function in R.  
   
 ```{r,echo=FALSE}
 # Now we're ready to explore model building. In preparation, split the dataset into a training set
@@ -218,6 +245,7 @@ train <- movies_bin[train_ind, ]
 test <- movies_bin[-train_ind, ]
 ```  
 
+
 ```{r,echo=FALSE}
 #Creating the Binomial Model 
 bin_movie <- glm(money ~ ., family=binomial(link='logit'),data=train)
@@ -234,7 +262,7 @@ auc
 ```
 
 
-Using all the prediction variables at hand, the model accurately predicts 76% of the time. Using backward stepwise regression, we attempted to remove some variables that may not have had significance in our model.
+Using all the prediction variables at hand, the model accurately predicts 74% of the time. Using backward stepwise regression, we attempted to remove some variables that may not have had significance in our model.
 
 ```{r,echo=FALSE}
 backward <- step(bin_movie)
@@ -248,6 +276,31 @@ auc_back <- auc_back@y.values[[1]]
 plot(prf)
 abline(a = 0, b = 1)
 auc_back
+```
+
+As you can see the using backward stepwise regression produced slightly better AIC scores, however, the AUC decreased, but minimially. Another revelation, was that the Director Facebook score was not a signficant factor in our model, and was thus removed by the backward stepwise regression. It appears that for our purposes here, the actors facebook likes were better indicators of profitability that directors, which goes to show how the industry has unfolded. A few directors may have become prominent in our culture, but the recognizability of actors and actresses have a greater pull on whether or not a movie will make money. 
+
+As a final step, we used a confusion matrix to show the relative strength of our model.
+
+```{r}
+#Creating confusion matrix
+bin_prediction <- ifelse(p > 0.5, 1, 0)
+confusion_bin <- confusionMatrix(data = bin_prediction, reference = test[,10])
+confusion_bin$table
+```
+
+As you can see we tend to have more false negatives than false positives, and the break down of accuracy, specificity, precision and F1-score can be seen below:
+
+```{r, echo= FALSE}
+f1 <- function(s,p) {
+  (2*p*s)/(p+s)
+}
+
+Parameters <- c("Accuracy", "Classification Error Rate", "Precision", "Sensitivity", "Specificity", "F1 Score")
+
+#Creating Confusion Matrix outputs
+Model1 <- c(confusion_bin$overall["Accuracy"], 1 - confusion_bin$overall["Accuracy"], confusion_bin$byClass["Pos Pred Value"], confusion_bin$byClass["Sensitivity"], confusion_bin$byClass["Specificity"], f1(confusion_bin$byClass["Sensitivity"],confusion_bin$byClass["Pos Pred Value"]))
+kable(data.frame(Parameters, Model1))
 ```
 
 
